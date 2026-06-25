@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authentication - WUKUWORK</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      font-family: 'Inter', sans-serif;
+      background: #fff;
+      color: #000;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      text-align: center;
+      padding: 40px;
+    }
+    .loading {
+      font-family: "Bebas Neue", sans-serif;
+      font-size: 24px;
+      letter-spacing: 4px;
+      margin-bottom: 20px;
+    }
+    .success {
+      color: #231815;
+    }
+    .error {
+      color: #ff0000;
+    }
+    .btn {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 10px 30px;
+      background: #000;
+      color: #fff;
+      font-family: "Bebas Neue", sans-serif;
+      font-size: 16px;
+      letter-spacing: 2px;
+      text-decoration: none;
+      border: 1px solid #000;
+      transition: all 0.3s;
+    }
+    .btn:hover {
+      background: #fff;
+      color: #000;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="loading" id="status">Processing...</div>
+    <a href="login.html" class="btn" id="redirectBtn" style="display: none;">Go to Login</a>
+  </div>
+
+  <script>
+    async function handleAuthCallback() {
+      var urlParams = new URLSearchParams(window.location.search);
+      var token = urlParams.get('token');
+      var type = urlParams.get('type');
+      var email = urlParams.get('email');
+      var statusEl = document.getElementById('status');
+      var redirectBtn = document.getElementById('redirectBtn');
+
+      if (!token || !type || !email) {
+        statusEl.textContent = 'Invalid link';
+        statusEl.classList.add('error');
+        redirectBtn.style.display = 'inline-block';
+        return;
+      }
+
+      try {
+        var { data, error } = await _supabase.auth.signInWithOtp({
+          email: email,
+          token: token,
+          type: type
+        });
+
+        if (error) {
+          statusEl.textContent = 'Verification failed: ' + error.message;
+          statusEl.classList.add('error');
+        } else {
+          if (type === 'signup') {
+            statusEl.textContent = 'Email verified!';
+          } else if (type === 'recovery') {
+            statusEl.textContent = 'Password reset successful!';
+          }
+          statusEl.classList.add('success');
+        }
+      } catch (err) {
+        statusEl.textContent = 'Error: ' + err.message;
+        statusEl.classList.add('error');
+      }
+
+      redirectBtn.style.display = 'inline-block';
+      
+      setTimeout(function() {
+        window.location.href = 'login.html';
+      }, 3000);
+    }
+
+    window.addEventListener('load', handleAuthCallback);
+  </script>
+</body>
+</html>
