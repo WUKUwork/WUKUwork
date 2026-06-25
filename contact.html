@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>CoNtAcT WUKU - WUKUWORK</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body, a, button { cursor: none !important; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #fff;
+      color: #000;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* Custom Cursor */
+    .custom-cursor {
+      position: fixed;
+      pointer-events: none;
+      z-index: 10000;
+      transform: translate(-50%, -50%);
+      transition: transform 0.3s ease, width 0.3s ease, height 0.3s ease;
+      width: 32px;
+      height: 32px;
+    }
+    .custom-cursor.hovering { width: 48px; height: 48px; }
+    .custom-cursor svg { width: 100%; height: 100%; transition: transform 0.3s ease; }
+
+    /* Page Header */
+    .page { min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* Main Content */
+    .page-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 110px 20px 40px;
+      position: relative;
+    }
+
+    /* Contact layout: bubble + person */
+    .contact-layout {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    /* Bubble area */
+    .bubble-area {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 475 / 208;
+      background: url('communicate.svg') no-repeat center top;
+      background-size: 100% auto;
+      transform: scale(0);
+      transform-origin: 50% 100%;
+      transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 10;
+      margin-bottom: -5px;
+    }
+    .bubble-area.visible {
+      transform: scale(1);
+    }
+
+    /* Text overlay */
+    .bubble-text-overlay {
+      position: absolute;
+      top: 18%;
+      left: 20%;
+      width: 63%;
+      padding: 0;
+      opacity: 0;
+      transition: opacity 0.2s ease 0.35s;
+      pointer-events: none;
+      z-index: 11;
+      background: transparent;
+      max-height: 72%;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+    .bubble-text-overlay.visible {
+      opacity: 1;
+    }
+
+    /* Typing text line style */
+    .bubble-text-line {
+      font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', system-ui, -apple-system, sans-serif;
+      font-size: clamp(12px, 3.5vw, 15px);
+      font-weight: 500;
+      line-height: 1.55;
+      color: #0a0505;
+      letter-spacing: 0.02em;
+      word-break: break-word;
+      white-space: normal;
+      margin-bottom: 8px;
+    }
+    .bubble-text-line:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Character SVG */
+    .contact-svg {
+      width: 55%;
+      max-width: 260px;
+      height: auto;
+      cursor: none !important;
+      transition: transform 0.25s ease, filter 0.2s;
+      position: relative;
+      z-index: 5;
+      margin-top: -8px;
+      display: block;
+    }
+    .contact-svg:hover {
+      transform: scale(1.02);
+      filter: drop-shadow(0 8px 12px rgba(0,0,0,0.05));
+    }
+
+    /* Typing cursor */
+    .typing-cursor {
+      display: inline-block;
+      width: 2px;
+      height: 1.15em;
+      background-color: #040000;
+      margin-left: 2px;
+      vertical-align: text-bottom;
+      animation: blink 0.9s step-end infinite;
+      border-radius: 1px;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .custom-cursor { display: none; }
+      body, a, button { cursor: auto !important; }
+      .page-header { padding: 20px; }
+      .page-header h1 { font-size: 28px; }
+    }
+
+    @media (max-width: 480px) {
+      .bubble-text-overlay {
+        top: 14%;
+        left: 18%;
+        width: 67%;
+      }
+      .bubble-text-line {
+        font-size: 10px;
+        line-height: 1.45;
+        margin-bottom: 5px;
+      }
+      .page-header h1 { font-size: 24px; letter-spacing: 3px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Custom Cursor -->
+  <div class="custom-cursor" id="customCursor">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 55.91 55.91" id="cursorSvg">
+      <rect fill="#040000" x="21.3" y="26.4" width="13.31" height="3.11"/>
+    </svg>
+  </div>
+
+  <div class="page">
+    <div class="page-content">
+      <div class="contact-layout">
+        <!-- Bubble area -->
+        <div class="bubble-area" id="bubbleArea">
+          <div class="bubble-text-overlay" id="bubbleTextOverlay">
+            <div class="bubble-text-line" id="bubbleLine1"></div>
+            <div class="bubble-text-line" id="bubbleLine2"></div>
+            <div class="bubble-text-line" id="bubbleLine3"></div>
+            <div class="bubble-text-line" id="bubbleLine4"></div>
+          </div>
+        </div>
+
+        <!-- Character SVG -->
+        <img class="contact-svg" id="contactSvg" src="contact.svg" alt="contact person">
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      // ---------- 1. Custom Cursor Logic ----------
+      const cursor = document.getElementById('customCursor');
+      const cursorSvg = document.getElementById('cursorSvg');
+      const isTouch = window.matchMedia('(pointer: coarse)').matches;
+
+      function setCursorMinus() {
+        if (cursorSvg) {
+          cursorSvg.innerHTML = '<rect fill="#040000" x="21.3" y="26.4" width="13.31" height="3.11"/>';
+        }
+      }
+
+      function setCursorPlus() {
+        if (cursorSvg) {
+          cursorSvg.innerHTML = '<rect fill="#040000" x="21.3" y="21.3" width="13.31" height="3.11"/><rect fill="#040000" x="26.4" y="16.2" width="3.11" height="13.31"/>';
+        }
+      }
+
+      if (!isTouch && cursor) {
+        document.addEventListener('mousemove', (e) => {
+          cursor.style.left = e.clientX + 'px';
+          cursor.style.top = e.clientY + 'px';
+        });
+
+        let isClicking = false;
+        document.addEventListener('mousedown', () => {
+          isClicking = true;
+          setCursorPlus();
+        });
+        document.addEventListener('mouseup', () => {
+          isClicking = false;
+          setCursorMinus();
+        });
+
+        const interactiveElements = document.querySelectorAll('a, button, .contact-svg, .back-link');
+        interactiveElements.forEach((el) => {
+          el.addEventListener('mouseenter', () => {
+            cursor.classList.add('hovering');
+            if (!isClicking) setCursorPlus();
+          });
+          el.addEventListener('mouseleave', () => {
+            cursor.classList.remove('hovering');
+            if (!isClicking) setCursorMinus();
+          });
+        });
+
+        setCursorMinus();
+      } else if (cursor) {
+        cursor.style.display = 'none';
+      }
+
+      // ---------- 2. Core Interaction: Click character to show dialog + typing effect ----------
+      const contactSvgElem = document.getElementById('contactSvg');
+      const bubbleAreaElem = document.getElementById('bubbleArea');
+      const bubbleOverlayElem = document.getElementById('bubbleTextOverlay');
+
+      let hasClicked = false;
+
+      const originalDialogText = '(｡•ᴗ•｡)✧ 你好\n这里是WUKUwork-+5\n欢迎来和我联系!!\n邮箱为<1847940606@qq.com>';
+
+      const line1El = document.getElementById('bubbleLine1');
+      const line2El = document.getElementById('bubbleLine2');
+      const line3El = document.getElementById('bubbleLine3');
+      const line4El = document.getElementById('bubbleLine4');
+
+      function resetTextLines() {
+        if (line1El) line1El.innerHTML = '';
+        if (line2El) line2El.innerHTML = '';
+        if (line3El) line3El.innerHTML = '';
+        if (line4El) line4El.innerHTML = '';
+      }
+
+      function startOriginalTyping() {
+        resetTextLines();
+
+        const lines = originalDialogText.split('\n');
+        const targetLines = [line1El, line2El, line3El, line4El];
+
+        let currentLineIdx = 0;
+        let currentCharIdx = 0;
+
+        function typeNextCharacter() {
+          if (currentLineIdx >= lines.length) {
+            const lastLineElem = line4El;
+            if (lastLineElem && !lastLineElem.querySelector('.typing-cursor')) {
+              const cursorSpan = document.createElement('span');
+              cursorSpan.className = 'typing-cursor';
+              lastLineElem.appendChild(cursorSpan);
+            }
+            return;
+          }
+
+          const currentLineText = lines[currentLineIdx];
+          const currentLineDom = targetLines[currentLineIdx];
+          if (!currentLineDom) return;
+
+          if (currentCharIdx < currentLineText.length) {
+            const nextChar = currentLineText.charAt(currentCharIdx);
+            const tempCursor = currentLineDom.querySelector('.typing-cursor');
+            if (tempCursor) tempCursor.remove();
+
+            let currentHtml = currentLineDom.innerHTML;
+            if (nextChar === ' ') {
+              currentLineDom.innerHTML = currentHtml + ' ';
+            } else {
+              currentLineDom.innerHTML = currentHtml + nextChar;
+            }
+            currentCharIdx++;
+            const speed = 45 + Math.floor(Math.random() * 40);
+            setTimeout(typeNextCharacter, speed);
+          } else {
+            currentLineIdx++;
+            currentCharIdx = 0;
+            if (currentLineIdx < lines.length) {
+              setTimeout(typeNextCharacter, 180);
+            } else {
+              setTimeout(() => {
+                const lastElem = line4El;
+                if (lastElem && !lastElem.querySelector('.typing-cursor')) {
+                  const finalCursor = document.createElement('span');
+                  finalCursor.className = 'typing-cursor';
+                  lastElem.appendChild(finalCursor);
+                }
+              }, 150);
+            }
+          }
+        }
+
+        typeNextCharacter();
+      }
+
+      function adjustTextSpacingForBorder() {
+        if (!bubbleOverlayElem) return;
+        const vw = window.innerWidth;
+        if (vw <= 640) {
+          bubbleOverlayElem.style.top = '16%';
+          bubbleOverlayElem.style.left = '18%';
+          bubbleOverlayElem.style.width = '68%';
+          bubbleOverlayElem.style.maxHeight = '70%';
+        } else if (vw <= 1024) {
+          bubbleOverlayElem.style.top = '18%';
+          bubbleOverlayElem.style.left = '19.5%';
+          bubbleOverlayElem.style.width = '62%';
+          bubbleOverlayElem.style.maxHeight = '68%';
+        } else {
+          bubbleOverlayElem.style.top = '18%';
+          bubbleOverlayElem.style.left = '20%';
+          bubbleOverlayElem.style.width = '61%';
+          bubbleOverlayElem.style.maxHeight = '68%';
+        }
+
+        const lines = document.querySelectorAll('.bubble-text-line');
+        if (lines.length) {
+          lines.forEach((line, idx) => {
+            if (idx === lines.length - 1) {
+              line.style.marginBottom = '0px';
+            } else {
+              line.style.marginBottom = '8px';
+            }
+          });
+        }
+      }
+
+      window.addEventListener('resize', () => {
+        if (bubbleAreaElem && bubbleAreaElem.classList.contains('visible')) {
+          adjustTextSpacingForBorder();
+        }
+      });
+
+      if (contactSvgElem) {
+        contactSvgElem.addEventListener('click', function(e) {
+          e.stopPropagation();
+          if (hasClicked) return;
+          hasClicked = true;
+
+          if (bubbleAreaElem) {
+            bubbleAreaElem.classList.add('visible');
+          }
+
+          adjustTextSpacingForBorder();
+
+          setTimeout(() => {
+            if (bubbleOverlayElem) {
+              bubbleOverlayElem.classList.add('visible');
+            }
+            startOriginalTyping();
+          }, 280);
+        });
+      }
+
+      resetTextLines();
+
+      if (isTouch && cursor) {
+        cursor.style.display = 'none';
+      }
+
+      if (!isTouch) {
+        setCursorMinus();
+      }
+
+    })();
+  </script>
+  <script src="toolbar.js"></script>
+</body>
+</html>
