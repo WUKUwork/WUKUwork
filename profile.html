@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UsEr InFoRmAtIoN - WUKUWORK</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- 引入 Cropper.js 样式和脚本 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="supabase-config.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body, a, button { cursor: none !important; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #fff;
+      color: #000;
+      overflow-x: hidden;
+      min-height: 100vh;
+      padding-top: 80px;
+    }
+
+    .custom-cursor {
+      position: fixed;
+      pointer-events: none;
+      z-index: 10000;
+      transform: translate(-50%, -50%);
+      transition: transform 0.3s ease, width 0.3s ease, height 0.3s ease;
+      width: 32px;
+      height: 32px;
+    }
+    .custom-cursor.hovering { width: 48px; height: 48px; }
+    .custom-cursor svg { width: 100%; height: 100%; transition: transform 0.3s ease; }
+
+    .page { min-height: 100vh; display: flex; flex-direction: column; }
+
+    .profile-container {
+      flex: 1;
+      max-width: 960px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 50px 40px 80px;
+    }
+
+    .user-info {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 15px;
+      padding-bottom: 30px;
+    }
+    .avatar {
+      width: 90px;
+      height: 90px;
+      border: 1.5px solid #000;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px;
+      letter-spacing: 2px;
+      flex-shrink: 0;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .avatar:hover {
+      transform: scale(1.05);
+    }
+    .avatar.clickable {
+      cursor: pointer;
+    }
+    .user-meta h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: 4px;
+      margin-bottom: 6px;
+    }
+    .user-meta p {
+      font-size: 13px;
+      color: #666;
+      letter-spacing: 1px;
+    }
+
+    .section {
+      margin-top: 50px;
+    }
+    .section-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      letter-spacing: 4px;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #000;
+    }
+
+    .edit-form {
+      display: none;
+      background: #f9f9f9;
+      padding: 30px;
+      border: 1px solid #ddd;
+      margin-bottom: 20px;
+    }
+    .edit-form.active {
+      display: block;
+    }
+    .form-row {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 15px;
+    }
+    .form-group {
+      flex: 1;
+    }
+    .form-group label {
+      display: block;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 12px;
+      letter-spacing: 2px;
+      margin-bottom: 6px;
+      color: #666;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    .form-group input:focus {
+      border-color: #000;
+    }
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .btn {
+      padding: 10px 20px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 14px;
+      letter-spacing: 2px;
+      border: 1.5px solid #000;
+      background: #000;
+      color: #fff;
+      cursor: none;
+      transition: background 0.3s, color 0.3s;
+    }
+    .btn:hover {
+      background: #fff;
+      color: #000;
+    }
+    .btn-outline {
+      background: #fff;
+      color: #000;
+    }
+    .btn-outline:hover {
+      background: #000;
+      color: #fff;
+    }
+
+    .level-card {
+      border: 1.5px solid #000;
+      padding: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .level-info {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .level-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      letter-spacing: 3px;
+    }
+    .level-progress-bar {
+      width: 240px;
+      height: 6px;
+      background: #eee;
+      overflow: hidden;
+    }
+    .level-progress-fill {
+      width: 68%;
+      height: 100%;
+      background: #000;
+    }
+    .level-meta {
+      font-size: 12px;
+      color: #666;
+      letter-spacing: 1px;
+    }
+    .level-points {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px;
+      letter-spacing: 2px;
+    }
+
+    .order-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .order-item {
+      border: 1px solid #ddd;
+      padding: 18px 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: border-color 0.3s;
+    }
+    .order-item:hover { border-color: #000; }
+    .order-id {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 16px;
+      letter-spacing: 2px;
+    }
+    .order-name {
+      font-size: 13px;
+      color: #333;
+      margin-top: 4px;
+    }
+    .order-status {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 13px;
+      letter-spacing: 2px;
+      padding: 4px 12px;
+      border: 1px solid #000;
+    }
+    .order-price {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      letter-spacing: 1px;
+    }
+
+    .setting-list {
+      display: flex;
+      flex-direction: column;
+    }
+    .setting-item {
+      padding: 18px 0;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      text-decoration: none;
+      color: #000;
+      transition: padding-left 0.3s;
+    }
+    .setting-item:hover { padding-left: 8px; }
+    .setting-item:last-child { border-bottom: none; }
+    .setting-name {
+      font-size: 14px;
+      letter-spacing: 1px;
+    }
+    .setting-arrow {
+      font-size: 18px;
+      color: #999;
+    }
+
+    .message {
+      padding: 15px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      display: none;
+    }
+    .message.success {
+      background: #e8f5e9;
+      color: #2e7d32;
+      border: 1px solid #a5d6a7;
+    }
+    .message.error {
+      background: #ffebee;
+      color: #c62828;
+      border: 1px solid #ef9a9a;
+    }
+
+    .login-prompt {
+      text-align: center;
+      padding: 60px 20px;
+    }
+    .login-prompt h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px;
+      letter-spacing: 4px;
+      margin-bottom: 20px;
+    }
+    .login-prompt p {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 30px;
+    }
+    .login-prompt .btn {
+      padding: 14px 30px;
+      font-size: 16px;
+    }
+
+    .name-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.96);
+      z-index: 10001;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .name-modal-overlay.active {
+      display: flex;
+    }
+    /* 允许弹窗垂直滚动以容纳密保输入框 */
+    .name-modal-box {
+      background: #fff;
+      padding: 40px;
+      max-width: 480px;
+      max-height: 85vh;
+      overflow-y: auto;
+      width: 100%;
+      text-align: center;
+      border: 2px solid #000;
+    }
+    .name-modal-box h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: 3px;
+      margin-bottom: 12px;
+    }
+    .name-modal-box p {
+      font-size: 13px;
+      color: #666;
+      line-height: 1.6;
+      margin-bottom: 25px;
+    }
+
+    .edit-modal-overlay, .avatar-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 10001;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .edit-modal-overlay.active, .avatar-modal-overlay.active {
+      display: flex;
+    }
+    .edit-modal-box, .avatar-modal-box {
+      background: #fff;
+      padding: 30px;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+      border: 2px solid #000;
+    }
+
+    /* 裁剪容器的最大高度限制，防止排版变形 */
+    .cropper-container-wrapper {
+      width: 100%;
+      height: 240px;
+      border: 2px solid #000;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background: #f0f0f0;
+    }
+    .cropper-container-wrapper img {
+      max-width: 100%;
+      max-height: 100%;
+      display: block;
+    }
+
+    @media (max-width: 768px) {
+      .custom-cursor { display: none; }
+      body, a, button { cursor: auto !important; }
+      .profile-container { padding: 30px 20px 60px; }
+      .user-info { flex-direction: column; align-items: center; gap: 16px; }
+      .level-card { flex-direction: column; align-items: flex-start; gap: 16px; }
+      .level-progress-bar { width: 100%; }
+      .form-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="custom-cursor" id="customCursor">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 55.91 55.91" id="cursorSvg">
+      <rect fill="#040000" x="21.3" y="26.4" width="13.31" height="3.11"/>
+    </svg>
+  </div>
+
+  <div class="page">
+    <main class="profile-container">
+      <div id="profileContent">
+        <div class="message" id="message"></div>
+
+        <section class="user-info">
+          <div class="avatar" id="avatar" style="background: #fff; color: #000;">—</div>
+          <div class="user-meta">
+            <h2 id="username">——USER</h2>
+            <p id="userMeta" style="display: none;">PLATFORM ID: 10086 · Joined since 2024</p>
+          </div>
+        </section>
+
+        <div id="loginLink" style="text-align: center; margin-top: 0; margin-bottom: 30px;">
+          <a href="login.html" class="btn">LOG IN / SIGN UP</a>
+          <p style="color: #999; font-size: 12px; margin-top: 22px;">Please log in to your account first. If you haven't registered yet, click here.</p>
+        </div>
+
+        <section class="section">
+          <h3 class="section-title">*MeMbEr LeVeL</h3>
+          <div class="level-card">
+            <div class="level-info">
+              <span class="level-name">GOLD TIER</span>
+              <div class="level-progress-bar">
+                <div class="level-progress-fill"></div>
+              </div>
+              <span class="level-meta">680 / 1000 PTS TO PLATINUM</span>
+            </div>
+            <span class="level-points">680</span>
+          </div>
+        </section>
+
+        <section class="section">
+          <h3 class="section-title">*OrDeRs</h3>
+          <div class="order-list" id="orderList">
+          </div>
+        </section>
+
+        <section class="section">
+          <h3 class="section-title">*SeTtInGs</h3>
+          <div class="setting-list">
+            <a href="#" class="setting-item" id="setEditProfile">
+              <span class="setting-name">EdIt PrOfIlE</span>
+              <span class="setting-arrow">&gt;</span>
+            </a>
+            <!-- 已将文案更改为 ReSeT PaSsWoRd -->
+            <a href="#" class="setting-item" id="setChangePassword">
+              <span class="setting-name">ReSeT PaSsWoRd</span>
+              <span class="setting-arrow">&gt;</span>
+            </a>
+            <a href="#" class="setting-item" id="setOrderDetail">
+              <span class="setting-name">OrDeR DeTaIlS</span>
+              <span class="setting-arrow">&gt;</span>
+            </a>
+            <a href="#" class="setting-item" id="setOnlineService">
+              <span class="setting-name">OnLiNe SeRvIcE</span>
+              <span class="setting-arrow">&gt;</span>
+            </a>
+            <a href="#" class="setting-item" id="setLogout">
+              <span class="setting-name">LoG oUt</span>
+              <span class="setting-arrow">&gt;</span>
+            </a>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- 注册/登录成功后设置密保与改名弹窗 -->
+  <div class="name-modal-overlay" id="nameModalOverlay">
+    <div class="name-modal-box">
+      <h3>* WELCOME TO WUKUWORK</h3>
+      <p>Set your unique nickname and 3 security questions to complete your account setup.</p>
+      
+      <!-- 1. 昵称设置 -->
+      <div class="form-group" style="margin-bottom: 25px; text-align: left;">
+        <label style="font-family: 'Bebas Neue', sans-serif; font-size: 12px; letter-spacing: 2px; color: #000; font-weight: bold;">NICKNAME</label>
+        <input type="text" id="modalUsername" placeholder="Enter Nickname" style="width: 100%; padding: 12px; border: 2px solid #000; font-family: 'Inter', sans-serif; font-size: 14px; outline: none; margin-top: 5px;">
+      </div>
+
+      <div style="border-top: 1px dashed #000; margin: 20px 0; padding-top: 15px; text-align: left;">
+        <h4 style="font-family: 'Bebas Neue', sans-serif; font-size: 14px; letter-spacing: 2px; margin-bottom: 5px;">* SECURITY QUESTIONS</h4>
+        <p style="font-size: 11px; color: #888; margin-bottom: 15px;">These questions will be required if you need to reset your password.</p>
+      </div>
+
+      <!-- 密保问题 1 -->
+      <div class="form-group" style="margin-bottom: 15px; text-align: left;">
+        <label style="font-family: 'Bebas Neue', sans-serif; font-size: 11px; letter-spacing: 1px;">QUESTION 1</label>
+        <input type="text" id="modalQ1" placeholder="e.g. What is your pet's name?" style="width: 100%; padding: 10px; border: 2px solid #000; font-size: 13px; outline: none; margin-top: 3px;">
+        <input type="text" id="modalA1" placeholder="Your Answer" style="width: 100%; padding: 10px; border: 2px solid #000; border-top: none; font-size: 13px; outline: none;">
+      </div>
+
+      <!-- 密保问题 2 -->
+      <div class="form-group" style="margin-bottom: 15px; text-align: left;">
+        <label style="font-family: 'Bebas Neue', sans-serif; font-size: 11px; letter-spacing: 1px;">QUESTION 2</label>
+        <input type="text" id="modalQ2" placeholder="e.g. Your favorite food?" style="width: 100%; padding: 10px; border: 2px solid #000; font-size: 13px; outline: none; margin-top: 3px;">
+        <input type="text" id="modalA2" placeholder="Your Answer" style="width: 100%; padding: 10px; border: 2px solid #000; border-top: none; font-size: 13px; outline: none;">
+      </div>
+
+      <!-- 密保问题 3 -->
+      <div class="form-group" style="margin-bottom: 25px; text-align: left;">
+        <label style="font-family: 'Bebas Neue', sans-serif; font-size: 11px; letter-spacing: 1px;">QUESTION 3</label>
+        <input type="text" id="modalQ3" placeholder="e.g. City where you were born?" style="width: 100%; padding: 10px; border: 2px solid #000; font-size: 13px; outline: none; margin-top: 3px;">
+        <input type="text" id="modalA3" placeholder="Your Answer" style="width: 100%; padding: 10px; border: 2px solid #000; border-top: none; font-size: 13px; outline: none;">
+      </div>
+
+      <button class="btn" id="modalSaveBtn" style="width: 100%; height: 50px; font-size: 16px;">SAVE & START</button>
+    </div>
+  </div>
+
+  <!-- 用户信息编辑弹窗 (已移除密码修改字段) -->
+  <div class="edit-modal-overlay" id="editModalOverlay">
+    <div class="edit-modal-box">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px;">* EdIt PrOfIlE</h3>
+        <button id="closeEditModal" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+      </div>
+      <div class="form-group" style="margin-bottom: 15px; text-align: left;">
+        <label style="font-family: 'Bebas Neue', sans-serif; font-size: 12px; letter-spacing: 2px; color: #666;">UsErNaMe</label>
+        <input type="text" id="editProfileUsername" placeholder="Username" style="width: 100%; padding: 12px; border: 2px solid #000; font-family: 'Inter', sans-serif; font-size: 14px; outline: none; margin-top: 5px;">
+      </div>
+      <div class="form-group" style="margin-bottom: 15px; text-align: left;">
+        <label style="font-family: 'Bebas Neue', sans-serif; font-size: 12px; letter-spacing: 2px; color: #666;">PhOnE</label>
+        <input type="tel" id="editProfilePhone" placeholder="Phone number" style="width: 100%; padding: 12px; border: 2px solid #000; font-family: 'Inter', sans-serif; font-size: 14px; outline: none; margin-top: 5px;">
+      </div>
+      <button class="btn" id="saveProfileBtn" style="width: 100%; height: 50px; font-size: 16px; margin-top: 20px;">SaVe ChAnGeS</button>
+    </div>
+  </div>
+
+  <!-- 头像更换弹窗 (支持图片裁剪并去除了相机图标) -->
+  <div class="avatar-modal-overlay" id="avatarModalOverlay">
+    <div class="avatar-modal-box">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px;">* ChAnGe AvAtAr</h3>
+        <button id="closeAvatarModal" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+      </div>
+      
+      <div class="cropper-container-wrapper">
+        <img id="avatarPreview" src="" alt="Preview">
+        <span id="avatarPreviewPlaceholder" style="font-family: 'Bebas Neue', sans-serif; font-size: 40px; color: #999;">—</span>
+      </div>
+      
+      <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+        <label class="btn" style="flex: 1; text-align: center; padding: 12px; cursor: pointer;">
+          <input type="file" id="avatarFileInput" accept="image/*" style="display: none;">
+          CHOOSE IMAGE
+        </label>
+      </div>
+      
+      <button class="btn" id="saveAvatarBtn" style="width: 100%; height: 50px; font-size: 16px; display: none;">SaVe AvAtAr</button>
+      <button class="btn btn-outline" id="removeAvatarBtn" style="width: 100%; height: 40px; font-size: 14px; display: none; margin-top: 10px;">ReMoVe AvAtAr</button>
+    </div>
+  </div>
+
+  <script>
+    var customCursor = document.getElementById('customCursor');
+    var cursorSvg = document.getElementById('cursorSvg');
+    
+    if (customCursor) {
+      document.addEventListener('mousemove', function(e) {
+        customCursor.style.left = e.clientX + 'px';
+        customCursor.style.top = e.clientY + 'px';
+      });
+    }
+
+    function setCursorMinus() {
+      if (cursorSvg) cursorSvg.innerHTML = '<rect fill="#040000" x="21.3" y="26.4" width="13.31" height="3.11"/>';
+    }
+
+    function setCursorPlus() {
+      if (cursorSvg) cursorSvg.innerHTML = '<rect fill="#040000" x="21.3" y="21.3" width="13.31" height="3.11"/><rect fill="#040000" x="26.4" y="16.2" width="3.11" height="13.31"/>';
+    }
+
+    var isClicking = false;
+    document.addEventListener('mousedown', function() { isClicking = true; setCursorPlus(); });
+    document.addEventListener('mouseup', function() { isClicking = false; setCursorMinus(); });
+
+    function bindHover(el) {
+      if (!el) return;
+      el.addEventListener('mouseenter', function() {
+        if (customCursor) customCursor.classList.add('hovering');
+        if (!isClicking) setCursorPlus();
+      });
+      el.addEventListener('mouseleave', function() {
+        if (customCursor) customCursor.classList.remove('hovering');
+        if (!isClicking) setCursorMinus();
+      });
+    }
+
+    var currentUser = null;
+    var profileData = null;
+    var cropperInstance = null; // 用于存储 Cropperjs 实例
+    var selectedAvatarFile = null;
+
+    function showMessage(text, type) {
+      var msg = document.getElementById('message');
+      msg.textContent = text;
+      msg.className = 'message ' + type;
+      msg.style.display = 'block';
+      setTimeout(function() {
+        msg.style.display = 'none';
+      }, 5000);
+    }
+
+    function generatePlatformId(uuid) {
+      if (!uuid) return '100860';
+      var hash = 0;
+      for (var i = 0; i < uuid.length; i++) {
+        hash = uuid.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      var num = Math.abs(hash) % 900000 + 100000;
+      return num.toString();
+    }
+
+    async function fetchUserProfile() {
+      try {
+        var { data: sessionData } = await _supabase.auth.getSession();
+        
+        if (sessionData && sessionData.session) {
+          var user = sessionData.session.user;
+          currentUser = user;
+          
+          var { data: profile, error: profileError } = await _supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          if (profileError && profileError.code !== 'PGRST116') {
+            throw profileError;
+          }
+
+          var defaultUsername = user.email.split('@')[0];
+
+          if (!profile) {
+            var initialProfile = {
+              id: user.id,
+              username: defaultUsername,
+              phone: '',
+              q1: '', a1: '', q2: '', a2: '', q3: '', a3: ''
+            };
+            await _supabase.from('profiles').insert(initialProfile);
+            profileData = initialProfile;
+          } else {
+            profileData = profile;
+          }
+
+          updateProfileDisplay();
+          await fetchOrders();
+          
+          document.getElementById('loginLink').style.display = 'none';
+
+          // 如果没有昵称，或者没有设置密保问题，就强制弹出设置框
+          if (!profileData.username || profileData.username === defaultUsername || !profileData.q1) {
+            showNameChangeModal();
+          }
+
+        } else {
+          document.getElementById('loginLink').style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        document.getElementById('loginLink').style.display = 'block';
+      }
+    }
+
+    function showNameChangeModal() {
+      if (sessionStorage.getItem('name_prompted_once')) return;
+
+      var overlay = document.getElementById('nameModalOverlay');
+      var modalInput = document.getElementById('modalUsername');
+      if (overlay && modalInput) {
+        modalInput.value = profileData.username || '';
+        document.getElementById('modalQ1').value = profileData.q1 || '';
+        document.getElementById('modalA1').value = profileData.a1 || '';
+        document.getElementById('modalQ2').value = profileData.q2 || '';
+        document.getElementById('modalA2').value = profileData.a2 || '';
+        document.getElementById('modalQ3').value = profileData.q3 || '';
+        document.getElementById('modalA3').value = profileData.a3 || '';
+        overlay.classList.add('active');
+      }
+    }
+
+    document.getElementById('modalSaveBtn').addEventListener('click', async function() {
+      var modalInput = document.getElementById('modalUsername');
+      var newName = modalInput ? modalInput.value.trim() : '';
+
+      var q1 = document.getElementById('modalQ1').value.trim();
+      var a1 = document.getElementById('modalA1').value.trim();
+      var q2 = document.getElementById('modalQ2').value.trim();
+      var a2 = document.getElementById('modalA2').value.trim();
+      var q3 = document.getElementById('modalQ3').value.trim();
+      var a3 = document.getElementById('modalA3').value.trim();
+
+      if (!newName) {
+        alert('Please enter a valid nickname!');
+        return;
+      }
+
+      if (!q1 || !a1 || !q2 || !a2 || !q3 || !a3) {
+        alert('Please fill in all 3 security questions and answers to secure your account!');
+        return;
+      }
+
+      try {
+        var { error } = await _supabase.from('profiles').upsert({
+          id: currentUser.id,
+          username: newName,
+          q1: q1, a1: a1,
+          q2: q2, a2: a2,
+          q3: q3, a3: a3,
+          updated_at: new Date().toISOString()
+        });
+
+        if (error) throw error;
+
+        profileData.username = newName;
+        profileData.q1 = q1; profileData.a1 = a1;
+        profileData.q2 = q2; profileData.a2 = a2;
+        profileData.q3 = q3; profileData.a3 = a3;
+        
+        updateProfileDisplay();
+        
+        sessionStorage.setItem('name_prompted_once', 'true');
+        document.getElementById('nameModalOverlay').classList.remove('active');
+        showMessage('Welcome! Profile and security questions updated successfully.', 'success');
+      } catch (error) {
+        console.error('Error saving profile details:', error);
+        alert('Failed to save details: ' + error.message);
+      }
+    });
+
+    function updateProfileDisplay() {
+      if (!profileData || !currentUser) return;
+
+      var displayName = profileData.username || currentUser.email.split('@')[0];
+      var avatar = document.getElementById('avatar');
+      
+      if (profileData.avatar_url) {
+        avatar.style.background = 'none';
+        avatar.style.color = 'none';
+        avatar.innerHTML = '<img src="' + profileData.avatar_url + '" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">';
+      } else {
+        var avatarColor = profileData.avatar_color || '#ff6b6b';
+        var avatarTextColor = '#fff';
+        
+        var darkColors = ['#ff6b6b', '#45b7d1', '#96ceb4', '#fd79a8'];
+        if (darkColors.includes(avatarColor)) {
+          avatarTextColor = '#fff';
+        } else {
+          avatarTextColor = '#000';
+        }
+        
+        avatar.style.background = avatarColor;
+        avatar.style.color = avatarTextColor;
+        avatar.innerHTML = displayName.charAt(0).toUpperCase();
+      }
+      
+      document.getElementById('username').textContent = displayName;
+      
+      var platformId = generatePlatformId(currentUser.id);
+      var joinDate = currentUser.created_at ? new Date(currentUser.created_at).getFullYear() : '2024';
+      document.getElementById('userMeta').textContent = 'PLATFORM ID: ' + platformId + ' · Joined since ' + joinDate;
+      document.getElementById('userMeta').style.display = 'block';
+    }
+
+    async function fetchOrders() {
+      try {
+        var { data: orders, error } = await _supabase
+          .from('orders')
+          .select('*')
+          .eq('user_id', currentUser.id);
+
+        if (error) throw error;
+
+        var orderList = document.getElementById('orderList');
+        orderList.innerHTML = '';
+
+        if (orders && orders.length > 0) {
+          orders.forEach(function(order) {
+            var item = document.createElement('div');
+            item.className = 'order-item';
+            item.innerHTML = `
+              <div>
+                <div class="order-id">${order.order_id}</div>
+                <div class="order-name">${order.product_name}</div>
+              </div>
+              <span class="order-status">${order.status}</span>
+              <span class="order-price">¥ ${order.price}</span>
+            `;
+            orderList.appendChild(item);
+          });
+        } else {
+          orderList.innerHTML = '<div style="text-align: center; padding: 30px; color: #666;">No orders yet</div>';
+        }
+
+        document.querySelectorAll('.order-item').forEach(bindHover);
+      } catch (error) {
+        console.error('Error fetching orders:', error);
+      }
+    }
+
+    // 辅助函数：销毁当前的裁剪器实例
+    function destroyCropper() {
+      if (cropperInstance) {
+        cropperInstance.destroy();
+        cropperInstance = null;
+      }
+    }
+
+    window.addEventListener('load', function() {
+      document.getElementById('setEditProfile').addEventListener('click', function(e) {
+        e.preventDefault();
+        if (!currentUser) {
+          showMessage('Please log in first', 'error');
+          return;
+        }
+        document.getElementById('editProfileUsername').value = profileData.username || '';
+        document.getElementById('editProfilePhone').value = profileData.phone || '';
+        document.getElementById('editModalOverlay').classList.add('active');
+      });
+
+      document.getElementById('closeEditModal').addEventListener('click', function() {
+        document.getElementById('editModalOverlay').classList.remove('active');
+      });
+
+      document.getElementById('saveProfileBtn').addEventListener('click', async function() {
+        var username = document.getElementById('editProfileUsername').value;
+        var phone = document.getElementById('editProfilePhone').value;
+
+        if (!username) {
+          showMessage('Username is required', 'error');
+          return;
+        }
+
+        try {
+          var { error } = await _supabase.from('profiles').upsert({
+            id: currentUser.id,
+            username: username,
+            phone: phone,
+            updated_at: new Date().toISOString()
+          });
+
+          if (error) throw error;
+
+          profileData.username = username;
+          profileData.phone = phone;
+
+          updateProfileDisplay();
+          showMessage('Profile updated successfully!', 'success');
+          
+          document.getElementById('editModalOverlay').classList.remove('active');
+        } catch (error) {
+          console.error('Error updating profile:', error);
+          showMessage(error.message || 'Failed to update profile', 'error');
+        }
+      });
+
+      // 发送密码重置邮件功能 (指向 reset-password.html)
+      document.getElementById('setChangePassword').addEventListener('click', async function(e) {
+        e.preventDefault();
+        if (!currentUser) {
+          showMessage('Please log in first', 'error');
+          return;
+        }
+
+        var confirmSend = confirm('Are you sure you want to send a password reset email to ' + currentUser.email + '?');
+        if (!confirmSend) return;
+
+        try {
+          // 自适应本地及 GitHub Pages 的重定向路径
+          var { error } = await _supabase.auth.resetPasswordForEmail(currentUser.email, {
+            redirectTo: window.location.href.substring(0, window.location.href.lastIndexOf('/')) + '/reset-password.html'
+          });
+
+          if (error) throw error;
+
+          showMessage('Password reset email sent! Please check your inbox.', 'success');
+        } catch (error) {
+          console.error('Error sending reset email:', error);
+          showMessage(error.message || 'Failed to send reset email', 'error');
+        }
+      });
+
+      document.getElementById('avatar').addEventListener('click', function() {
+        if (!currentUser) {
+          showMessage('Please log in first', 'error');
+          return;
+        }
+        
+        var preview = document.getElementById('avatarPreview');
+        var placeholder = document.getElementById('avatarPreviewPlaceholder');
+        var saveBtn = document.getElementById('saveAvatarBtn');
+        var removeBtn = document.getElementById('removeAvatarBtn');
+        
+        selectedAvatarFile = null;
+        destroyCropper();
+        
+        if (profileData.avatar_url) {
+          preview.src = profileData.avatar_url;
+          preview.style.display = 'block';
+          placeholder.style.display = 'none';
+          removeBtn.style.display = 'block';
+          saveBtn.style.display = 'none';
+        } else {
+          preview.src = '';
+          preview.style.display = 'none';
+          placeholder.style.display = 'block';
+          removeBtn.style.display = 'none';
+          saveBtn.style.display = 'none';
+        }
+        
+        document.getElementById('avatarModalOverlay').classList.add('active');
+      });
+
+      document.getElementById('closeAvatarModal').addEventListener('click', function() {
+        destroyCropper();
+        document.getElementById('avatarModalOverlay').classList.remove('active');
+        selectedAvatarFile = null;
+      });
+
+      // 选择本地图片
+      function handleAvatarFile(file) {
+        if (!file) return;
+        
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          selectedAvatarFile = file;
+          var preview = document.getElementById('avatarPreview');
+          var placeholder = document.getElementById('avatarPreviewPlaceholder');
+          var saveBtn = document.getElementById('saveAvatarBtn');
+          var removeBtn = document.getElementById('removeAvatarBtn');
+          
+          destroyCropper();
+          
+          preview.src = e.target.result;
+          preview.style.display = 'block';
+          placeholder.style.display = 'none';
+          saveBtn.style.display = 'block';
+          removeBtn.style.display = 'none';
+
+          // 初始化裁剪插件 (设置为 1:1 比例正方形)
+          cropperInstance = new Cropper(preview, {
+            aspectRatio: 1,
+            viewMode: 1,
+            autoCropArea: 1,
+            background: false,
+            responsive: true,
+            zoomable: true,
+            movable: true,
+          });
+        };
+        reader.readAsDataURL(file);
+      }
+
+      document.getElementById('avatarFileInput').addEventListener('change', function(e) {
+        handleAvatarFile(e.target.files[0]);
+      });
+
+      document.getElementById('removeAvatarBtn').addEventListener('click', async function() {
+        if (!confirm('Are you sure you want to remove your avatar?')) return;
+
+        try {
+          if (profileData.avatar_url) {
+            var fileName = profileData.avatar_url.split('/').pop();
+            await _supabase.storage.from('avatars').remove([fileName]);
+          }
+
+          var { error } = await _supabase.from('profiles').upsert({
+            id: currentUser.id,
+            avatar_url: null,
+            updated_at: new Date().toISOString()
+          });
+
+          if (error) throw error;
+
+          profileData.avatar_url = null;
+          updateProfileDisplay();
+          showMessage('Avatar removed successfully!', 'success');
+          
+          destroyCropper();
+          document.getElementById('avatarModalOverlay').classList.remove('active');
+        } catch (error) {
+          console.error('Error removing avatar:', error);
+          showMessage(error.message || 'Failed to remove avatar', 'error');
+        }
+      });
+
+      document.getElementById('saveAvatarBtn').addEventListener('click', async function() {
+        if (!cropperInstance) {
+          showMessage('Please select an image', 'error');
+          return;
+        }
+
+        // 获取裁剪后的图像数据画布
+        cropperInstance.getCroppedCanvas({
+          width: 300,
+          height: 300
+        }).toBlob(async function(blob) {
+          if (!blob) {
+            showMessage('Failed to process image cropped area', 'error');
+            return;
+          }
+
+          try {
+            var fileExt = selectedAvatarFile ? selectedAvatarFile.name.split('.').pop() : 'png';
+            var fileName = 'avatar_' + currentUser.id + '_' + Date.now() + '.' + fileExt;
+            
+            // 上传裁剪后的 blob 到 'avatars' 存储桶
+            var { error: uploadError } = await _supabase.storage.from('avatars').upload(fileName, blob, {
+              contentType: 'image/' + (fileExt === 'jpg' ? 'jpeg' : fileExt),
+              cacheControl: '3600',
+              upsert: true
+            });
+
+            if (uploadError) {
+              if (uploadError.message && uploadError.message.toLowerCase().includes('bucket not found')) {
+                throw new Error('Storage bucket "avatars" not found. Please create a public bucket named "avatars" in your Supabase storage dashboard.');
+              }
+              throw uploadError;
+            }
+
+            var { data: publicUrlData } = _supabase.storage.from('avatars').getPublicUrl(fileName);
+            
+            var { error } = await _supabase.from('profiles').upsert({
+              id: currentUser.id,
+              avatar_url: publicUrlData.publicUrl,
+              updated_at: new Date().toISOString()
+            });
+
+            if (error) throw error;
+
+            profileData.avatar_url = publicUrlData.publicUrl;
+            updateProfileDisplay();
+            showMessage('Avatar updated successfully!', 'success');
+            
+            destroyCropper();
+            document.getElementById('avatarModalOverlay').classList.remove('active');
+          } catch (error) {
+            console.error('Error updating avatar:', error);
+            showMessage(error.message || 'Failed to update avatar', 'error');
+          }
+        }, 'image/png');
+      });
+
+      document.getElementById('setLogout').addEventListener('click', async function(e) {
+        e.preventDefault();
+        if (confirm('Are you sure you want to log out?')) {
+          try {
+            await _supabase.auth.signOut();
+            window.location.href = 'login.html';
+          } catch (error) {
+            console.error('Error logging out:', error);
+          }
+        }
+      });
+
+      document.getElementById('setOrderDetail').addEventListener('click', function(e) {
+        e.preventDefault();
+        alert('Order Details feature - Coming Soon!');
+      });
+
+      document.getElementById('setOnlineService').addEventListener('click', function(e) {
+        e.preventDefault();
+        alert('Online Service feature - Coming Soon!');
+      });
+
+      bindHover(document.getElementById('modalSaveBtn'));
+      bindHover(document.getElementById('setEditProfile'));
+      bindHover(document.getElementById('setChangePassword'));
+      bindHover(document.getElementById('closeEditModal'));
+      bindHover(document.getElementById('saveProfileBtn'));
+      bindHover(document.getElementById('closeAvatarModal'));
+      bindHover(document.getElementById('saveAvatarBtn'));
+      document.querySelectorAll('.setting-item').forEach(bindHover);
+
+      setTimeout(fetchUserProfile, 100);
+    });
+  </script>
+  <script src="toolbar.js"></script>
+</body>
+</html>
