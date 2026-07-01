@@ -1293,15 +1293,19 @@
       "6": 45.00
     };
 
+    // 数据同步核心：此页面（profile.html）的所有收藏与购物车修改动作，现在均通过调用外部统一的 worksCart 对象（数据连通层）进行管理，彻底打通云数据库 [2.2.2]
     function updateCartCounts() {
-      var favorites = JSON.parse(localStorage.getItem('works_favorites') || '[]');
-      var cart = JSON.parse(localStorage.getItem('works_cart') || '[]');
+      // 统一改为直接读取 worksCart 中的当前数值
+      var favorites = (typeof worksCart !== 'undefined' && worksCart.favorites) ? worksCart.favorites : [];
+      var cart = (typeof worksCart !== 'undefined' && worksCart.cart) ? worksCart.cart : [];
       
       var favoritesCount = document.getElementById('favoritesCount');
       var cartCount = document.getElementById('cartCount');
       
       if (favoritesCount) favoritesCount.textContent = favorites.length;
-      if (cartCount) cartCount.textContent = cart.reduce(function(sum, item) { return sum + (item.quantity || 1); }, 0);
+      if (cartCount) {
+        cartCount.textContent = cart.reduce(function(sum, item) { return sum + (item.quantity || 1); }, 0);
+      }
 
       // 计算当前勾选结算的商品总价
       var totalPrice = 0;
@@ -1315,28 +1319,15 @@
       if (totalPriceEl) totalPriceEl.textContent = '¥ ' + totalPrice.toFixed(2);
     }
 
-    // 全局一键安全跳转至 Works 商品详情页面
-    function goToProduct(workId) {
-      window.location.href = 'works.html?id=' + workId;
-    }
-
     window.addEventListener('load', function() {
-      updateCartCounts();
-
-      // 捕获外部跳转参数：如果是从 works 页面点击 BUY NOW 跳转过来的，自动呼出购物车弹窗进行结算
-      var urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('open') === 'cart') {
-        setTimeout(function() {
-          var cartCard = document.getElementById('cartCard');
-          if (cartCard) {
-            cartCard.click(); // 自动模拟点击打开购物车弹窗
-          }
-        }, 300); // 稍微延时以确保 DOM 完全加载就绪
-      }
+      // 延时等待 works-cart.js 底层加载同步完成后，首次初始化计数器
+      setTimeout(function() {
+        updateCartCounts();
+      }, 150);
 
       // 1. 渲染并显示收藏夹弹窗
       document.getElementById('favoritesCard').addEventListener('click', function() {
-        var favorites = JSON.parse(localStorage.getItem('works_favorites') || '[]');
+        var favorites = (typeof worksCart !== 'undefined' && worksCart.favorites) ? worksCart.favorites : [];
         var list = document.getElementById('favoritesList');
         
         if (favorites.length === 0) {
@@ -1350,7 +1341,7 @@
               '<div style="font-size: 13px; font-weight: 500; cursor: pointer;">' + item.title + '</div>' +
               '</div>' +
               '<div class="cart-item-right">' +
-              '<button onclick="removeFromFavorites(\'' + item.id + '\')" class="cart-remove-btn" style="background: none; border: none; color: #ff6b6b; font-size: 20px; cursor: pointer; padding: 0 10px;">&times;</button>' +
+              '<button onclick="removeFromFavorites(\'' + item.id + '\')" class="cart-remove-btn">&times;</button>' +
               '</div>' +
               '</div>';
           }).join('');
@@ -1378,9 +1369,9 @@
         document.getElementById('cartModalOverlay').classList.remove('active');
       });
 
-      // 3. 勾选合并结算动作监听 (只结算已被勾选的商品，且成功后清空已选、保留未选)
-      document.getElementById('cartCheckoutBtn').addEventListener('click', function() {
-        var cart = JSON.parse(localStorage.getItem('works_cart') || '[]');
+      // 3. 勾选合并结算动作监听 (结算并清除已选，且调用 worksCart.saveToStorage 将修改同步推送至云端 Supabase) [2.2.2]
+      document.getElementById('cartCheckoutBtn').addEventListener('click', async function() {
+        var cart = (typeof worksCart !== 'undefined' && worksCart.cart) ? worksCart.cart : [];
         var selectedItems = cart.filter(function(item) { return item.selected !== false; });
         
         if (selectedItems.length === 0) {
@@ -1392,7 +1383,11 @@
         
         // 核心过滤：将未勾选的商品重新保存到购物车，清除已购商品
         var remainingItems = cart.filter(function(item) { return item.selected === false; });
-        localStorage.setItem('works_cart', JSON.stringify(remainingItems));
+        
+        if (typeof worksCart !== 'undefined') {
+          worksCart.cart = remainingItems;
+          await worksCart.saveToStorage(); // 同步向云端推回最新的购物车快照数据 [2.2.2]
+        }
         
         updateCartCounts();
         renderCartList();
@@ -1407,9 +1402,9 @@
       bindHover(document.getElementById('cartCheckoutBtn'));
     });
 
-    // 渲染购物车内容 (支持复选框和加减操作，自适应移动端布局)
+    // 渲染购物车内容 (完全绑定至 worksCart 对象，支持复选框和加减操作) [2.2.2]
     function renderCartList() {
-      var cart = JSON.parse(localStorage.getItem('works_cart') || '[]');
+      var cart = (typeof worksCart !== 'undefined' && worksCart.cart) ? worksCart.cart : [];
       var list = document.getElementById('cartList');
       
       if (cart.length === 0) {
@@ -1419,7 +1414,7 @@
           var priceStr = "¥ " + (productPrices[item.id] || 100.00).toFixed(2);
           var isChecked = item.selected !== false ? 'checked' : '';
           
-          return '<div class="cart-item" style="cursor: none;">' +
+          return '<div class="cart-item">' +
             '<input type="checkbox" class="cart-select-checkbox" data-id="' + item.id + '" ' + isChecked + ' onchange="toggleSelectCartItem(\'' + item.id + '\', this.checked)" style="width: 18px; height: 18px; accent-color: #000; cursor: pointer; flex-shrink: 0;">' +
             '<img src="' + item.image + '" onclick="goToProduct(\'' + item.id + '\')" style="width: 70px; height: 70px; object-fit: cover; border: 1px solid #000; cursor: pointer;" alt="' + item.title + '">' +
             '<div class="cart-item-info" onclick="goToProduct(\'' + item.id + '\')">' +
@@ -1445,27 +1440,25 @@
       }
     }
 
-    // 密保/收藏删除动作
+    // 收藏删除动作 (同步至云端) [2.2.2]
     function removeFromFavorites(workId) {
-      var favorites = JSON.parse(localStorage.getItem('works_favorites') || '[]');
-      favorites = favorites.filter(function(item) { return item.id !== workId; });
-      localStorage.setItem('works_favorites', JSON.stringify(favorites));
+      if (typeof worksCart !== 'undefined') {
+        worksCart.removeFromFavorites(workId); // 自动回存本地并同步云端
+      }
       updateCartCounts();
       
       var list = document.getElementById('favoritesList');
-      if (favorites.length === 0) {
+      if (worksCart.favorites.length === 0) {
         list.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">No favorites yet</div>';
       } else {
-        list.innerHTML = favorites.map(function(item) {
-          return '<div class="cart-item" style="cursor: none;">' +
+        list.innerHTML = worksCart.favorites.map(function(item) {
+          return '<div style="border: 2px solid #000; padding: 15px; margin-bottom: 10px; display: flex; gap: 15px; align-items: center; cursor: none;">' +
             '<img src="' + item.image + '" onclick="goToProduct(\'' + item.id + '\')" style="width: 80px; height: 80px; object-fit: cover; border: 1px solid #000; cursor: pointer;" alt="' + item.title + '">' +
-            '<div class="cart-item-info" onclick="goToProduct(\'' + item.id + '\')">' +
+            '<div style="flex: 1;" onclick="goToProduct(\'' + item.id + '\')">' +
             '<div style="font-family: \'Bebas Neue\', sans-serif; font-size: 14px; letter-spacing: 1px; color: #666; cursor: pointer;">*' + item.category + '</div>' +
             '<div style="font-size: 13px; font-weight: 500; cursor: pointer;">' + item.title + '</div>' +
             '</div>' +
-            '<div class="cart-item-right">' +
-            '<button onclick="removeFromFavorites(\'' + item.id + '\')" class="cart-remove-btn">&times;</button>' +
-            '</div>' +
+            '<button onclick="removeFromFavorites(\'' + item.id + '\')" class="remove-fav-btn" style="background: none; border: none; color: #ff6b6b; font-size: 20px; cursor: pointer; padding: 0 10px;">&times;</button>' +
             '</div>';
         }).join('');
         setTimeout(function() {
@@ -1474,40 +1467,46 @@
       }
     }
 
-    // 购物车项选择与取消逻辑
+    // 购物车项选择与取消逻辑 (同步至云端) [2.2.2]
     function toggleSelectCartItem(workId, checked) {
-      var cart = JSON.parse(localStorage.getItem('works_cart') || '[]');
-      var item = cart.find(function(i) { return i.id === workId; });
-      if (item) {
-        item.selected = checked;
-      }
-      localStorage.setItem('works_cart', JSON.stringify(cart));
-      updateCartCounts();
-    }
-
-    // 购物车内手动点击加减数量计算器动作
-    function changeQty(workId, delta) {
-      var cart = JSON.parse(localStorage.getItem('works_cart') || '[]');
-      var item = cart.find(function(i) { return i.id === workId; });
-      if (item) {
-        item.quantity = (item.quantity || 1) + delta;
-        if (item.quantity <= 0) {
-          cart = cart.filter(function(i) { return i.id !== workId; });
+      if (typeof worksCart !== 'undefined') {
+        var item = worksCart.cart.find(function(i) { return i.id === workId; });
+        if (item) {
+          item.selected = checked;
+          worksCart.saveToStorage(); // 推送最新的勾选状态到云端
         }
       }
-      localStorage.setItem('works_cart', JSON.stringify(cart));
       updateCartCounts();
-      renderCartList();
     }
 
+    // 购物车内手动点击加减数量计算器动作 (同步至云端) [2.2.2]
+    function changeQty(workId, delta) {
+      if (typeof worksCart !== 'undefined') {
+        var item = worksCart.cart.find(function(i) { return i.id === workId; });
+        if (item) {
+          var newQty = (item.quantity || 1) + delta;
+          if (newQty <= 0) {
+            worksCart.removeFromCart(workId);
+          } else {
+            worksCart.updateCartQuantity(workId, newQty);
+          }
+        }
+        updateCartCounts();
+        renderCartList();
+      }
+    }
+
+    // 购物车单项直接删除 (同步至云端) [2.2.2]
     function removeFromCart(workId) {
-      var cart = JSON.parse(localStorage.getItem('works_cart') || '[]');
-      cart = cart.filter(function(item) { return item.id !== workId; });
-      localStorage.setItem('works_cart', JSON.stringify(cart));
+      if (typeof worksCart !== 'undefined') {
+        worksCart.removeFromCart(workId); // 自动同步推送到云端
+      }
       updateCartCounts();
       renderCartList();
     }
   </script>
+  <!-- 在 profile.html 的倒数第二行引入数据连通层和核心逻辑 -->
+  <script src="works-cart.js"></script>
   <script src="toolbar.js"></script>
 </body>
 </html>

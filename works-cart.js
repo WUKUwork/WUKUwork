@@ -109,7 +109,7 @@ var worksCart = {
     if (typeof renderCartList === 'function') renderCartList();
   },
   
-  // 核心：保存本地并强制【同步/等待】推送到云端数据库
+  // 核心：保存本地并强制【同步/等待】通过 upsert 写入云端数据库 (无视记录是否存在) [3.2.1]
   saveToStorage: async function() {
     var self = this;
 
@@ -125,15 +125,17 @@ var worksCart = {
     localStorage.setItem('works_favorites', JSON.stringify(this.favorites));
     localStorage.setItem('works_cart', JSON.stringify(this.cart));
 
-    // 3. 如果用户已登录，同步将最新数据更新到云端 profiles 表
+    // 3. 如果用户已登录，采用 .upsert 机制强制在 profiles 表中写入数据 (即使行不存在也会自动创建) [3.2.1]
     if (self.currentUser && typeof _supabase !== 'undefined') {
       try {
-        var { error } = await _supabase.from('profiles').update({
+        var { error } = await _supabase.from('profiles').upsert({
+          id: self.currentUser.id,
           favorites: self.favorites,
           cart: self.cart,
           updated_at: new Date().toISOString()
-        }).eq('id', self.currentUser.id);
+        });
         
+        // 【关键调试点】：如果写入数据库失败，强制在控制台打印出具体 RLS 策略或格式错误信息！
         if (error) {
           console.error('Supabase cloud save error details:', error);
         }
@@ -322,7 +324,6 @@ var worksCart = {
     }
   },
 
-  // 动态向 HTML 注入实线和全宽对齐样式
   injectStyles: function() {
     var styleId = 'wuku-buy-now-styles';
     if (document.getElementById(styleId)) return;
@@ -340,7 +341,7 @@ var worksCart = {
       '  gap: 30px;',
       '  background: #fff;',
       '  flex-shrink: 0;',
-      '  width: 100%; /* 横跨整块弹窗底部 */',
+      '  width: 100%;',
       '}',
       '@media (max-width: 768px) {',
       '  #modalBuyNowComponent {',
@@ -358,12 +359,10 @@ var worksCart = {
     document.head.appendChild(style);
   },
 
-  // 动态创建并注入弹窗大容器底部（横跨整个底部，不参与滑动）
   injectPurchaseComponent: function(workData) {
     var modalContainer = document.querySelector('.modal-container');
     if (!modalContainer || !workData) return;
     
-    // 检查并清除上一次可能残留的旧组件
     var oldComponent = document.getElementById('modalBuyNowComponent');
     if (oldComponent) oldComponent.remove();
     
@@ -390,7 +389,6 @@ var worksCart = {
       '<button id="modalBuyNowBtn" style="flex: 1; height: 48px; border: 2px solid #000; background: #000; color: #fff; font-family: \'Inter\', sans-serif; font-size: 18px; font-weight: 400; letter-spacing: 1px; cursor: none !important; transition: 0.2s; display: flex; align-items: center; justify-content: center;">BUY NOW</button>'
     ].join('\n');
     
-    // 直接作为大容器的子元素添加在 modal-body 下方
     modalContainer.appendChild(div);
     
     var btn = document.getElementById('modalBuyNowBtn');
