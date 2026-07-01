@@ -1,24 +1,6 @@
 (function() {
-  // 工具栏HTML - 与 index.html 保持完全一致
+  // 完整还原后的高清矢量 SVG 导航栏 HTML 结构
   var TOOLBAR_HTML = [
-    '<header class="toolbar-header" id="sharedToolbar">',
-    '  <div class="toolbar-left-btn" id="menu-btn">',
-    '    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23.07 23.07">',
-    '      <g>',
-    '        <rect fill="#231815" x="3.37" y="6.82" width="16.33" height="1.55"/>',
-    '        <rect fill="#2313" y="26.4" width="13.31" height="3.11"/>',
-    '        <rect fill="#040000" x="21.3" y="26.4" width="13.31" height="3.11"/>',
-    '      </svg>',
-    '    </button>',
-    '    <button class="modal-action-btn" id="user-btn" style="border: none; background: none; font-family: \'Bebas Neue\', sans-serif; font-size: 16px; letter-spacing: 1px; color: #000; padding: 0 10px;">ME</button>',
-    '  </div>',
-    '  <div style="font-family: \'Bebas Neue\', sans-serif; font-size: 24px; letter-spacing: 2px;">WUKUwork-+5</div>',
-    '  <div style="width: 36px; height: 36px;"></div>', // 保持两侧对称平衡的空间占位
-    '</main>'
-  ].join('\n'); // 注：由于是动态注入，外层结构可保持精简
-
-  // 工具栏完整 HTML DOM 结构（与您的导航逻辑保持一致）
-  var TOOLBAR_DOM = [
     '<header class="toolbar-header" id="sharedToolbar">',
     '  <div class="toolbar-left-btn" id="menu-btn">',
     '    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23.07 23.07">',
@@ -31,7 +13,7 @@
     '    </svg>',
     '  </div>',
     '  <div class="toolbar-center-text" style="cursor: pointer;" onclick="window.location.href=\'index.html\'">',
-    '    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 117.68 35.86">',
+    '    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 117.68 35.86" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">',
     '      <path fill="#231815" d="M2.8,24.23L0,12.14h2.18l1.24,5.91.76,3.71h.05l.87-3.71,1.44-5.91h2.41l1.43,5.91.86,3.71h.05l.78-3.71,1.27-5.91h2.1l-2.9,12.09h-2.49l-1.57-6.43-.76-3.25h-.03l-.79,3.25-1.58,6.43h-2.52Z"/>',
     '      <path fill="#231815" d="M17.23,12.14h2.14v7.44c0,1.95.68,2.92,2.44,2.92s2.46-.97,2.46-2.92v-7.44h2.13v7.14c0,3.55-1.22,5.16-4.59,5.16s-4.59-1.62-4.59-5.16v-7.14s.01,0,.01,0Z"/>',
     '      <path fill="#231815" d="M29.22,24.23v-12.09h2.18v6.02h.08l1.72-2.24,3.1-3.78h2.51l-4.24,5.05,4.57,7.04h-2.59l-3.51-5.53-1.63,1.91v3.61h-2.19Z"/>',
@@ -64,7 +46,7 @@
     '</div>'
   ].join('\n');
 
-  // 工具栏CSS - 已深度优化自适应与防换行机制
+  // 工具栏CSS - 锁定中间 Logo 在最高精度的物理尺寸上，绝不随设备大小变化
   var TOOLBAR_CSS = [
     '.toolbar-header {',
     '  position: fixed;',
@@ -77,11 +59,17 @@
     '  display: flex;',
     '  justify-content: space-between;',
     '  align-items: center;',
-    '  height: 57.86px;',
+    '  height: 57.86px;    /* 保持：导航栏精致的高度 */',
+    '  box-sizing: border-box;',
     '}',
-    '.toolbar-left-btn { width: 23.07px; flex-shrink: 0; cursor: pointer; }',
-    '.toolbar-center-text { flex-shrink: 0; transform: scale(0.7); transform-origin: center center; }',
-    '.toolbar-right-btn { width: 23.07px; flex-shrink: 0; cursor: pointer; }',
+    '.toolbar-left-btn { width: 23.07px; flex-shrink: 0; cursor: pointer; } /* 保持：左侧按钮原版尺寸 */',
+    '.toolbar-center-text {',
+    '  width: 170px !important;  /* 强行锁死：Logo 物理宽度增加至 170px */',
+    '  height: 52px !important;  /* 强行锁死：Logo 物理高度提升至 52px（极限饱满大字，且不溢出破线） */',
+    '  flex-shrink: 0;',
+    '  cursor: pointer;',
+    '}',
+    '.toolbar-right-btn { width: 23.07px; flex-shrink: 0; cursor: pointer; } /* 保持：右侧按钮尺寸 */',
     '.toolbar-left-btn svg, .toolbar-center-text svg, .toolbar-right-btn svg {',
     '  width: 100%; height: auto; display: block;',
     '}',
@@ -91,36 +79,36 @@
     '  transform: translate(-50%, -50%) scale(0.95);',
     '  background: #fff;',
     '  border: 1.5px solid #000;',
-    '  padding: 20px 30px;',
+    '  padding: 40px 30px;',
     '  z-index: 5000;',
     '  opacity: 0;',
     '  visibility: hidden;',
     '  transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;',
-    '  width: max-content; /* 自适应最长字数宽度 */',
-    '  max-width: 90vw;    /* 限制最大宽度，防止超出屏幕 */',
+    '  width: 85vw;',
+    '  max-width: 440px;',
     '  box-sizing: border-box;',
+    '  text-align: center;',
     '}',
     '.menu-popup.active { opacity: 1; visibility: visible; transform: translate(-50%, -50%) scale(1); }',
     '.menu-popup a {',
     '  display: block;',
     '  font-family: "Bebas Neue", sans-serif;',
-    '  font-size: 20px;',
+    '  font-size: clamp(16px, 4.5vw, 22px);',
     '  color: #000;',
     '  text-decoration: none;',
     '  letter-spacing: 4px;',
-    '  padding: 8px 0;',
+    '  padding: 12px 0;',
     '  border-bottom: 1px solid #eee;',
     '  transition: color 0.3s;',
-    '  white-space: nowrap; /* 强制单行显示，禁止文字发生换行 */',
+    '  white-space: nowrap;',
     '}',
     '.menu-popup a:last-child { border-bottom: none; }',
     '.menu-popup a:hover { color: #999; }',
     '.menu-home-link { text-align: center; }',
     '@media (max-width: 768px) {',
     '  .toolbar-header { padding: 8px 15px; }',
-    '  .menu-popup a {',
-    '    font-size: 16px;       /* 手机端微调字号 */',
-    '    letter-spacing: 2px;   /* 微调间距，完美配合小屏尺寸 */',
+    '  .menu-popup {',
+    '    padding: 30px 20px;',
     '  }',
     '}'
   ].join('\n');
@@ -147,7 +135,7 @@
   function injectToolbar() {
     if (document.getElementById('sharedToolbar')) return;
     var wrap = document.createElement('div');
-    wrap.innerHTML = TOOLBAR_DOM;
+    wrap.innerHTML = TOOLBAR_HTML; // 此处已统一修复为正确变量名 TOOLBAR_HTML，杜绝报错崩溃
     while (wrap.firstChild) {
       document.body.insertBefore(wrap.firstChild, document.body.firstChild);
     }
@@ -168,6 +156,8 @@
     var menuBtn = document.getElementById('menu-btn');
     var userBtn = document.getElementById('user-btn');
     var menuPopup = document.getElementById('menuPopup');
+    var base = getRelativePath();
+
     function bindHover(el) {
       if (!el) return;
       el.addEventListener('mouseenter', function() {
