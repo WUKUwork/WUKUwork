@@ -26,7 +26,7 @@
     .custom-cursor {
       position: fixed;
       pointer-events: none;
-      z-index: 10000;
+      z-index: 100000; /* 已提升到 100000，解决弹窗盖住鼠标的问题 */
       transform: translate(-50%, -50%);
       transition: transform 0.3s ease, width 0.3s ease, height 0.3s ease;
       width: 32px;
@@ -173,45 +173,6 @@
       color: #fff;
     }
 
-    .level-card {
-      border: 1.5px solid #000;
-      padding: 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .level-info {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .level-name {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 24px;
-      letter-spacing: 3px;
-    }
-    .level-progress-bar {
-      width: 240px;
-      height: 6px;
-      background: #eee;
-      overflow: hidden;
-    }
-    .level-progress-fill {
-      width: 68%;
-      height: 100%;
-      background: #000;
-    }
-    .level-meta {
-      font-size: 12px;
-      color: #666;
-      letter-spacing: 1px;
-    }
-    .level-points {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 32px;
-      letter-spacing: 2px;
-    }
-
     .order-list {
       display: flex;
       flex-direction: column;
@@ -252,6 +213,7 @@
     .setting-list {
       display: flex;
       flex-direction: column;
+      margin-top: 30px;
     }
     .setting-item {
       padding: 18px 0;
@@ -351,7 +313,7 @@
       margin-bottom: 25px;
     }
 
-    .edit-modal-overlay, .avatar-modal-overlay {
+    .edit-modal-overlay, .avatar-modal-overlay, .order-modal-overlay {
       display: none;
       position: fixed;
       top: 0;
@@ -364,16 +326,39 @@
       justify-content: center;
       padding: 20px;
     }
-    .edit-modal-overlay.active, .avatar-modal-overlay.active {
+    .edit-modal-overlay.active, .avatar-modal-overlay.active, .order-modal-overlay.active {
       display: flex;
     }
-    .edit-modal-box, .avatar-modal-box {
+    .edit-modal-box, .avatar-modal-box, .order-modal-box {
       background: #fff;
       padding: 30px;
-      max-width: 400px;
+      max-width: 440px;
       width: 100%;
       text-align: center;
       border: 2px solid #000;
+    }
+    
+    /* 弹窗定制最大宽度，保证多列数据展现完整 */
+    .order-modal-box {
+      max-width: 500px;
+    }
+
+    /* 选项卡按钮样式 */
+    .order-tabs .tab-btn {
+      flex: 1;
+      padding: 10px;
+      border: 2px solid #000;
+      background: #fff;
+      color: #000;
+      font-family: 'Bebas Neue', sans-serif;
+      letter-spacing: 1px;
+      font-size: 13px;
+      cursor: none;
+      transition: background 0.3s, color 0.3s;
+    }
+    .order-tabs .tab-btn.active {
+      background: #000 !important;
+      color: #fff !important;
     }
 
     /* 裁剪容器的最大高度限制，防止排版变形 */
@@ -399,9 +384,8 @@
       body, a, button { cursor: auto !important; }
       .profile-container { padding: 30px 20px 60px; }
       .user-info { flex-direction: column; align-items: center; gap: 16px; }
-      .level-card { flex-direction: column; align-items: flex-start; gap: 16px; }
-      .level-progress-bar { width: 100%; }
       .form-row { flex-direction: column; }
+      .order-tabs .tab-btn { cursor: auto !important; }
     }
   </style>
 </head>
@@ -430,34 +414,35 @@
           <p style="color: #999; font-size: 12px; margin-top: 22px;">Please log in to your account first. If you haven't registered yet, click here.</p>
         </div>
 
-        <section class="section">
-          <h3 class="section-title">*MeMbEr LeVeL</h3>
-          <div class="level-card">
-            <div class="level-info">
-              <span class="level-name">GOLD TIER</span>
-              <div class="level-progress-bar">
-                <div class="level-progress-fill"></div>
-              </div>
-              <span class="level-meta">680 / 1000 PTS TO PLATINUM</span>
+        <!-- 收藏与购物车方形大按钮，已完全对齐 works 极简矢量图标线宽和几何属性 -->
+        <div style="display: flex; gap: 15px; margin-bottom: 30px;">
+          <div class="mini-cart-card" id="favoritesCard" style="flex: 1; border: 2px solid #000; padding: 20px; cursor: pointer; transition: background 0.3s;">
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.5" style="width: 32px; height: 32px; margin-bottom: 10px;">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+              <span style="font-family: 'Bebas Neue', sans-serif; font-size: 14px; letter-spacing: 2px;">FaVoRiTeS</span>
+              <span id="favoritesCount" style="font-family: 'Bebas Neue', sans-serif; font-size: 24px; color: #000;">0</span>
             </div>
-            <span class="level-points">680</span>
           </div>
-        </section>
-
-        <section class="section">
-          <h3 class="section-title">*OrDeRs</h3>
-          <div class="order-list" id="orderList">
+          <div class="mini-cart-card" id="cartCard" style="flex: 1; border: 2px solid #000; padding: 20px; cursor: pointer; transition: background 0.3s;">
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="1.5" style="width: 32px; height: 32px; margin-bottom: 10px;">
+                <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/>
+              </svg>
+              <span style="font-family: 'Bebas Neue', sans-serif; font-size: 14px; letter-spacing: 2px;">ShOpPiNg CaRt</span>
+              <span id="cartCount" style="font-family: 'Bebas Neue', sans-serif; font-size: 24px; color: #000;">0</span>
+            </div>
           </div>
-        </section>
+        </div>
 
-        <section class="section">
-          <h3 class="section-title">*SeTtInGs</h3>
+        <!-- 直接显示设置项（已去除了外层 ORDERS 和 SETTINGS 标题装饰线） -->
+        <section class="section" style="margin-top: 20px;">
           <div class="setting-list">
             <a href="#" class="setting-item" id="setEditProfile">
               <span class="setting-name">EdIt PrOfIlE</span>
               <span class="setting-arrow">&gt;</span>
             </a>
-            <!-- 已将文案更改为 ReSeT PaSsWoRd -->
             <a href="#" class="setting-item" id="setChangePassword">
               <span class="setting-name">ReSeT PaSsWoRd</span>
               <span class="setting-arrow">&gt;</span>
@@ -522,7 +507,7 @@
     </div>
   </div>
 
-  <!-- 用户信息编辑弹窗 (已移除密码修改字段) -->
+  <!-- 用户信息编辑弹窗 -->
   <div class="edit-modal-overlay" id="editModalOverlay">
     <div class="edit-modal-box">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -566,6 +551,70 @@
     </div>
   </div>
 
+  <!-- 订单详情弹窗（全新加入） -->
+  <div class="order-modal-overlay" id="orderModalOverlay">
+    <div class="order-modal-box">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px;">* OrDeR DeTaIlS</h3>
+        <button id="closeOrderModal" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+      </div>
+      
+      <!-- 搜索栏 -->
+      <div class="form-group" style="margin-bottom: 15px; text-align: left;">
+        <input type="text" id="modalOrderSearch" placeholder="SEARCH ORDERS BY NAME OR ID..." style="width: 100%; padding: 12px; border: 2px solid #000; font-family: 'Inter', sans-serif; font-size: 13px; outline: none;">
+      </div>
+
+      <!-- 三个分类选项卡 -->
+      <div class="order-tabs" style="display: flex; gap: 8px; margin-bottom: 20px;">
+        <button class="tab-btn active" data-category="ALL">ALL</button>
+        <button class="tab-btn" data-category="SHIPPING">ON THE WAY</button>
+        <button class="tab-btn" data-category="COMPLETED">COMPLETED</button>
+      </div>
+
+      <!-- 订单展示区 -->
+      <div class="order-list" id="modalOrderList" style="max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
+        <!-- 订单数据动态加载于此 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 收藏列表弹窗 -->
+  <div class="edit-modal-overlay" id="favoritesModalOverlay">
+    <div class="edit-modal-box" style="max-width: 480px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px;">* My FaVoRiTeS</h3>
+        <button id="closeFavoritesModal" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+      </div>
+      <div id="favoritesList" style="max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px;">
+        <div style="text-align: center; padding: 40px; color: #999;">No favorites yet</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 购物车弹窗 (已优化加减数量与选择结算功能) -->
+  <div class="edit-modal-overlay" id="cartModalOverlay">
+    <div class="edit-modal-box" style="max-width: 480px; display: flex; flex-direction: column; max-height: 85vh;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-shrink: 0;">
+        <h3 style="font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px;">* ShOpPiNg CaRt</h3>
+        <button id="closeCartModal" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+      </div>
+      
+      <!-- 购物车列表区域 -->
+      <div id="cartList" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px;">
+        <div style="text-align: center; padding: 40px; color: #999;">Your cart is empty</div>
+      </div>
+
+      <!-- 结算组件区域 (固定于最底部) -->
+      <div id="cartPurchaseComponent" style="border-top: 1.5px dashed #000; padding-top: 15px; display: flex; flex-direction: column; gap: 12px; flex-shrink: 0; text-align: left; margin-top: 15px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 2.5px; color: #000;">TOTAL PRICE:</span>
+          <span id="cartTotalPrice" style="font-family: 'Bebas Neue', sans-serif; font-size: 24px; font-weight: bold; color: #000;">¥ 0.00</span>
+        </div>
+        <button class="btn" id="cartCheckoutBtn" style="width: 100%; height: 50px; font-size: 16px;">CHECKOUT SELECTED</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     var customCursor = document.getElementById('customCursor');
     var cursorSvg = document.getElementById('cursorSvg');
@@ -605,6 +654,11 @@
     var profileData = null;
     var cropperInstance = null; // 用于存储 Cropperjs 实例
     var selectedAvatarFile = null;
+    
+    // 增加全局变量保存订单数据和筛选条件
+    var userOrders = [];
+    var activeCategory = 'ALL';
+    var searchQuery = '';
 
     function showMessage(text, type) {
       var msg = document.getElementById('message');
@@ -664,8 +718,8 @@
           
           document.getElementById('loginLink').style.display = 'none';
 
-          // 如果没有昵称，或者没有设置密保问题，就强制弹出设置框
-          if (!profileData.username || profileData.username === defaultUsername || !profileData.q1) {
+          // 仅当用户没有设置过密保（说明是首次注册或未初始化）时，才强制弹出设置框
+          if (!profileData.q1) {
             showNameChangeModal();
           }
 
@@ -778,6 +832,7 @@
       document.getElementById('userMeta').style.display = 'block';
     }
 
+    // 后台获取用户订单并存入全局数组
     async function fetchOrders() {
       try {
         var { data: orders, error } = await _supabase
@@ -786,31 +841,70 @@
           .eq('user_id', currentUser.id);
 
         if (error) throw error;
-
-        var orderList = document.getElementById('orderList');
-        orderList.innerHTML = '';
-
-        if (orders && orders.length > 0) {
-          orders.forEach(function(order) {
-            var item = document.createElement('div');
-            item.className = 'order-item';
-            item.innerHTML = `
-              <div>
-                <div class="order-id">${order.order_id}</div>
-                <div class="order-name">${order.product_name}</div>
-              </div>
-              <span class="order-status">${order.status}</span>
-              <span class="order-price">¥ ${order.price}</span>
-            `;
-            orderList.appendChild(item);
-          });
-        } else {
-          orderList.innerHTML = '<div style="text-align: center; padding: 30px; color: #666;">No orders yet</div>';
-        }
-
-        document.querySelectorAll('.order-item').forEach(bindHover);
+        userOrders = orders || [];
       } catch (error) {
         console.error('Error fetching orders:', error);
+      }
+    }
+
+    // 弹窗内部动态搜索与分类渲染订单逻辑
+    function renderModalOrders() {
+      var container = document.getElementById('modalOrderList');
+      if (!container) return;
+      container.innerHTML = '';
+
+      var filtered = userOrders.filter(function(order) {
+        // 1. 搜索过滤
+        var matchesSearch = true;
+        if (searchQuery) {
+          var q = searchQuery.toLowerCase();
+          var prodName = (order.product_name || '').toLowerCase();
+          var orderId = (order.order_id || '').toLowerCase();
+          matchesSearch = prodName.indexOf(q) !== -1 || orderId.indexOf(q) !== -1;
+        }
+
+        // 2. 状态分类过滤
+        var matchesCategory = true;
+        var status = (order.status || '').toLowerCase();
+        if (activeCategory === 'SHIPPING') {
+          // 匹配包含："在路上", "配送中", "shipping", "transit", "way", "发货", "运输"
+          matchesCategory = status.indexOf('way') !== -1 || 
+                            status.indexOf('shipping') !== -1 || 
+                            status.indexOf('transit') !== -1 || 
+                            status.indexOf('路') !== -1 || 
+                            status.indexOf('发货') !== -1 || 
+                            status.indexOf('运输') !== -1 || 
+                            status.indexOf('派送') !== -1;
+        } else if (activeCategory === 'COMPLETED') {
+          // 匹配包含："已完成", "completed", "done", "success", "收货", "成功"
+          matchesCategory = status.indexOf('complete') !== -1 || 
+                            status.indexOf('success') !== -1 || 
+                            status.indexOf('done') !== -1 || 
+                            status.indexOf('完') !== -1 || 
+                            status.indexOf('收') !== -1 ||
+                            status.indexOf('成') !== -1;
+        }
+
+        return matchesSearch && matchesCategory;
+      });
+
+      if (filtered.length > 0) {
+        filtered.forEach(function(order) {
+          var item = document.createElement('div');
+          item.className = 'order-item';
+          item.innerHTML = `
+            <div>
+              <div class="order-id">${order.order_id}</div>
+              <div class="order-name">${order.product_name}</div>
+            </div>
+            <span class="order-status">${order.status}</span>
+            <span class="order-price">¥ ${order.price}</span>
+          `;
+          container.appendChild(item);
+        });
+        document.querySelectorAll('#modalOrderList .order-item').forEach(bindHover);
+      } else {
+        container.innerHTML = '<div style="text-align: center; padding: 30px; color: #666; font-size: 13px;">No matching orders found</div>';
       }
     }
 
@@ -1069,9 +1163,57 @@
         }
       });
 
+      // 点击 OrDeR DeTaIlS 打开全新的自定义订单详情弹窗
       document.getElementById('setOrderDetail').addEventListener('click', function(e) {
         e.preventDefault();
-        alert('Order Details feature - Coming Soon!');
+        if (!currentUser) {
+          showMessage('Please log in first', 'error');
+          return;
+        }
+        
+        // 1. 初始化过滤状态
+        activeCategory = 'ALL';
+        searchQuery = '';
+        var searchInput = document.getElementById('modalOrderSearch');
+        if (searchInput) searchInput.value = '';
+
+        // 2. 选项卡重置为第一个按钮高亮
+        document.querySelectorAll('.order-tabs .tab-btn').forEach(function(btn) {
+          btn.classList.remove('active');
+          if (btn.getAttribute('data-category') === 'ALL') {
+            btn.classList.add('active');
+          }
+        });
+
+        // 3. 渲染订单并呼出弹窗
+        renderModalOrders();
+        document.getElementById('orderModalOverlay').classList.add('active');
+      });
+
+      // 订单详情弹窗关闭逻辑
+      document.getElementById('closeOrderModal').addEventListener('click', function() {
+        document.getElementById('orderModalOverlay').classList.remove('active');
+      });
+
+      // 订单搜索框输入事件监听
+      var orderSearchInput = document.getElementById('modalOrderSearch');
+      if (orderSearchInput) {
+        orderSearchInput.addEventListener('input', function(e) {
+          searchQuery = e.target.value;
+          renderModalOrders();
+        });
+      }
+
+      // 订单选项卡切换逻辑
+      document.querySelectorAll('.order-tabs .tab-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          document.querySelectorAll('.order-tabs .tab-btn').forEach(function(b) {
+            b.classList.remove('active');
+          });
+          btn.classList.add('active');
+          activeCategory = btn.getAttribute('data-category');
+          renderModalOrders();
+        });
       });
 
       document.getElementById('setOnlineService').addEventListener('click', function(e) {
@@ -1079,17 +1221,242 @@
         alert('Online Service feature - Coming Soon!');
       });
 
+      // 绑定黑白动态鼠标指针对相关核心元素的交互
       bindHover(document.getElementById('modalSaveBtn'));
       bindHover(document.getElementById('setEditProfile'));
       bindHover(document.getElementById('setChangePassword'));
+      bindHover(document.getElementById('setOrderDetail'));
+      bindHover(document.getElementById('setOnlineService'));
+      bindHover(document.getElementById('setLogout'));
       bindHover(document.getElementById('closeEditModal'));
       bindHover(document.getElementById('saveProfileBtn'));
       bindHover(document.getElementById('closeAvatarModal'));
       bindHover(document.getElementById('saveAvatarBtn'));
+      bindHover(document.getElementById('closeOrderModal'));
+      bindHover(document.getElementById('modalOrderSearch'));
       document.querySelectorAll('.setting-item').forEach(bindHover);
 
       setTimeout(fetchUserProfile, 100);
     });
+
+    // 核心价格字典
+    var productPrices = {
+      "1": 120.00,
+      "2": 188.00,
+      "3": 240.00,
+      "4": 320.00,
+      "5": 150.00,
+      "6": 45.00
+    };
+
+    function updateCartCounts() {
+      var favorites = JSON.parse(localStorage.getItem('works_favorites') || '[]');
+      var cart = JSON.parse(localStorage.getItem('works_cart') || '[]');
+      
+      var favoritesCount = document.getElementById('favoritesCount');
+      var cartCount = document.getElementById('cartCount');
+      
+      if (favoritesCount) favoritesCount.textContent = favorites.length;
+      if (cartCount) cartCount.textContent = cart.reduce(function(sum, item) { return sum + (item.quantity || 1); }, 0);
+
+      // 计算当前勾选结算的商品总价
+      var totalPrice = 0;
+      cart.forEach(function(item) {
+        if (item.selected !== false) {
+          var unitPrice = productPrices[item.id] || 100.00;
+          totalPrice += unitPrice * (item.quantity || 1);
+        }
+      });
+      var totalPriceEl = document.getElementById('cartTotalPrice');
+      if (totalPriceEl) totalPriceEl.textContent = '¥ ' + totalPrice.toFixed(2);
+    }
+
+    // 全局一键安全跳转至 Works 商品详情页面
+    function goToProduct(workId) {
+      window.location.href = 'works.html?id=' + workId;
+    }
+
+    window.addEventListener('load', function() {
+      updateCartCounts();
+
+      // 捕获外部跳转参数：如果是从 works 页面点击 BUY NOW 跳转过来的，自动呼出购物车弹窗进行结算
+      var urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('open') === 'cart') {
+        setTimeout(function() {
+          var cartCard = document.getElementById('cartCard');
+          if (cartCard) {
+            cartCard.click(); // 自动模拟点击打开购物车弹窗
+          }
+        }, 300); // 稍微延时以确保 DOM 完全加载就绪
+      }
+
+      // 1. 渲染并显示收藏夹弹窗
+      document.getElementById('favoritesCard').addEventListener('click', function() {
+        var favorites = JSON.parse(localStorage.getItem('works_favorites') || '[]');
+        var list = document.getElementById('favoritesList');
+        
+        if (favorites.length === 0) {
+          list.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">No favorites yet</div>';
+        } else {
+          list.innerHTML = favorites.map(function(item) {
+            return '<div style="border: 2px solid #000; padding: 15px; margin-bottom: 10px; display: flex; gap: 15px; align-items: center; cursor: none;">' +
+              '<img src="' + item.image + '" onclick="goToProduct(\'' + item.id + '\')" style="width: 80px; height: 80px; object-fit: cover; border: 1px solid #000; cursor: pointer;" alt="' + item.title + '">' +
+              '<div style="flex: 1;" onclick="goToProduct(\'' + item.id + '\')">' +
+              '<div style="font-family: \'Bebas Neue\', sans-serif; font-size: 14px; letter-spacing: 1px; color: #666; cursor: pointer;">*' + item.category + '</div>' +
+              '<div style="font-size: 13px; font-weight: 500; cursor: pointer;">' + item.title + '</div>' +
+              '</div>' +
+              '<button onclick="removeFromFavorites(\'' + item.id + '\')" class="remove-fav-btn" style="background: none; border: none; color: #ff6b6b; font-size: 20px; cursor: pointer; padding: 0 10px;">&times;</button>' +
+              '</div>';
+          }).join('');
+          
+          // 给动态生成的所有按钮和图片重新绑定自定义鼠标指针悬浮放大
+          setTimeout(function() {
+            document.querySelectorAll('#favoritesList img, #favoritesList div, #favoritesList button').forEach(bindHover);
+          }, 30);
+        }
+        
+        document.getElementById('favoritesModalOverlay').classList.add('active');
+      });
+
+      document.getElementById('closeFavoritesModal').addEventListener('click', function() {
+        document.getElementById('favoritesModalOverlay').classList.remove('active');
+      });
+
+      // 2. 渲染并显示购物车弹窗
+      document.getElementById('cartCard').addEventListener('click', function() {
+        renderCartList();
+        document.getElementById('cartModalOverlay').classList.add('active');
+      });
+
+      document.getElementById('closeCartModal').addEventListener('click', function() {
+        document.getElementById('cartModalOverlay').classList.remove('active');
+      });
+
+      // 3. 勾选合并结算动作监听 (只结算已被勾选的商品，且成功后清空已选、保留未选)
+      document.getElementById('cartCheckoutBtn').addEventListener('click', function() {
+        var cart = JSON.parse(localStorage.getItem('works_cart') || '[]');
+        var selectedItems = cart.filter(function(item) { return item.selected !== false; });
+        
+        if (selectedItems.length === 0) {
+          alert('Please select at least one item to purchase.');
+          return;
+        }
+        
+        alert('Checkout successful for ' + selectedItems.length + ' item(s)!');
+        
+        // 核心过滤：将未勾选的商品重新保存到购物车，清除已购商品
+        var remainingItems = cart.filter(function(item) { return item.selected === false; });
+        localStorage.setItem('works_cart', JSON.stringify(remainingItems));
+        
+        updateCartCounts();
+        renderCartList();
+        document.getElementById('cartModalOverlay').classList.remove('active');
+      });
+
+      // 绑定方形按钮和关闭按钮的黑白动态鼠标
+      bindHover(document.getElementById('favoritesCard'));
+      bindHover(document.getElementById('cartCard'));
+      bindHover(document.getElementById('closeFavoritesModal'));
+      bindHover(document.getElementById('closeCartModal'));
+      bindHover(document.getElementById('cartCheckoutBtn'));
+    });
+
+    // 渲染购物车内容 (支持复选框和加减操作)
+    function renderCartList() {
+      var cart = JSON.parse(localStorage.getItem('works_cart') || '[]');
+      var list = document.getElementById('cartList');
+      
+      if (cart.length === 0) {
+        list.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">Your cart is empty</div>';
+      } else {
+        list.innerHTML = cart.map(function(item) {
+          var priceStr = "¥ " + (productPrices[item.id] || 100.00).toFixed(2);
+          var isChecked = item.selected !== false ? 'checked' : '';
+          
+          return '<div style="border: 2px solid #000; padding: 15px; margin-bottom: 10px; display: flex; gap: 12px; align-items: center; cursor: none;">' +
+            '<input type="checkbox" class="cart-select-checkbox" data-id="' + item.id + '" ' + isChecked + ' onchange="toggleSelectCartItem(\'' + item.id + '\', this.checked)" style="width: 18px; height: 18px; accent-color: #000; cursor: pointer; flex-shrink: 0;">' +
+            '<img src="' + item.image + '" onclick="goToProduct(\'' + item.id + '\')" style="width: 70px; height: 70px; object-fit: cover; border: 1px solid #000; cursor: pointer;" alt="' + item.title + '">' +
+            '<div style="flex: 1;" onclick="goToProduct(\'' + item.id + '\')">' +
+            '<div style="font-family: \'Bebas Neue\', sans-serif; font-size: 14px; letter-spacing: 1px; color: #666; cursor: pointer;">*' + item.category + '</div>' +
+            '<div style="font-size: 13px; font-weight: 500; cursor: pointer;">' + item.title + '</div>' +
+            '<div style="font-size: 13px; font-weight: bold; margin-top: 4px;">' + priceStr + '</div>' +
+            '</div>' +
+            '<div style="display: flex; align-items: center; border: 1.5px solid #000; height: 26px; flex-shrink: 0; background: #fff;">' +
+            '<button onclick="changeQty(\'' + item.id + '\', -1)" style="width: 24px; height: 100%; background: none; border: none; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold;">-</button>' +
+            '<span style="width: 26px; text-align: center; font-size: 12px; font-weight: bold; border-left: 1.5px solid #000; border-right: 1.5px solid #000; display: block; line-height: 24px;">' + (item.quantity || 1) + '</span>' +
+            '<button onclick="changeQty(\'' + item.id + '\', 1)" style="width: 24px; height: 100%; background: none; border: none; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold;">+</button>' +
+            '</div>' +
+            '<button onclick="removeFromCart(\'' + item.id + '\')" style="background: none; border: none; color: #ff6b6b; font-size: 20px; cursor: pointer; padding: 0 10px; flex-shrink: 0;">&times;</button>' +
+            '</div>';
+        }).join('');
+
+        // 重新为主播按钮及图片绑定悬浮指针
+        setTimeout(function() {
+          document.querySelectorAll('#cartList input, #cartList img, #cartList div, #cartList button').forEach(bindHover);
+        }, 30);
+      }
+    }
+
+    // 密保/收藏删除动作
+    function removeFromFavorites(workId) {
+      var favorites = JSON.parse(localStorage.getItem('works_favorites') || '[]');
+      favorites = favorites.filter(function(item) { return item.id !== workId; });
+      localStorage.setItem('works_favorites', JSON.stringify(favorites));
+      updateCartCounts();
+      
+      var list = document.getElementById('favoritesList');
+      if (favorites.length === 0) {
+        list.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">No favorites yet</div>';
+      } else {
+        list.innerHTML = favorites.map(function(item) {
+          return '<div style="border: 2px solid #000; padding: 15px; margin-bottom: 10px; display: flex; gap: 15px; align-items: center; cursor: none;">' +
+            '<img src="' + item.image + '" onclick="goToProduct(\'' + item.id + '\')" style="width: 80px; height: 80px; object-fit: cover; border: 1px solid #000; cursor: pointer;" alt="' + item.title + '">' +
+            '<div style="flex: 1;" onclick="goToProduct(\'' + item.id + '\')">' +
+            '<div style="font-family: \'Bebas Neue\', sans-serif; font-size: 14px; letter-spacing: 1px; color: #666; cursor: pointer;">*' + item.category + '</div>' +
+            '<div style="font-size: 13px; font-weight: 500; cursor: pointer;">' + item.title + '</div>' +
+            '</div>' +
+            '<button onclick="removeFromFavorites(\'' + item.id + '\')" style="background: none; border: none; color: #ff6b6b; font-size: 20px; cursor: pointer; padding: 0 10px;">&times;</button>' +
+            '</div>';
+        }).join('');
+        setTimeout(function() {
+          document.querySelectorAll('#favoritesList img, #favoritesList div, #favoritesList button').forEach(bindHover);
+        }, 30);
+      }
+    }
+
+    // 购物车项选择与取消逻辑
+    function toggleSelectCartItem(workId, checked) {
+      var cart = JSON.parse(localStorage.getItem('works_cart') || '[]');
+      var item = cart.find(function(i) { return i.id === workId; });
+      if (item) {
+        item.selected = checked;
+      }
+      localStorage.setItem('works_cart', JSON.stringify(cart));
+      updateCartCounts();
+    }
+
+    // 购物车内手动点击加减数量计算器动作
+    function changeQty(workId, delta) {
+      var cart = JSON.parse(localStorage.getItem('works_cart') || '[]');
+      var item = cart.find(function(i) { return i.id === workId; });
+      if (item) {
+        item.quantity = (item.quantity || 1) + delta;
+        if (item.quantity <= 0) {
+          cart = cart.filter(function(i) { return i.id !== workId; });
+        }
+      }
+      localStorage.setItem('works_cart', JSON.stringify(cart));
+      updateCartCounts();
+      renderCartList();
+    }
+
+    function removeFromCart(workId) {
+      var cart = JSON.parse(localStorage.getItem('works_cart') || '[]');
+      cart = cart.filter(function(item) { return item.id !== workId; });
+      localStorage.setItem('works_cart', JSON.stringify(cart));
+      updateCartCounts();
+      renderCartList();
+    }
   </script>
   <script src="toolbar.js"></script>
 </body>
