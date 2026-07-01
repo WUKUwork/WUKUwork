@@ -1,9 +1,10 @@
 const supabaseUrl = 'https://qrfflkfcmiybgtcysupg.supabase.co';
 const supabaseKey = 'sb_publishable_WxEHfw7blMpchHp7EZOrRw_gGGQyo2H';
 
-// 增加了 auth: { flowType: 'implicit' } 配置，解决跨设备重置链接失效的问题
-const _supabase = window.supabase.createClient(supabaseUrl, supabaseKey, {
+// 【修改后】使用 var 声明并将客户端直接挂载在 window.supabase 上，确保所有外部 JS（包括 works-cart.js）都能 100% 稳定读取它
+var _supabase = window.supabase.createClient(supabaseUrl, supabaseKey, {
   auth: {
     flowType: 'implicit'
   }
 });
+window._supabase = _supabase;

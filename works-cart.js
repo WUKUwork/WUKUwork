@@ -14,6 +14,7 @@ var worksCart = {
     this.handleUrlRedirection(); // 启动一键跳转和弹窗自动拉起机制
   },
   
+  // 核心：自适应数据同步加载与安全容错
   loadFromStorage: async function() {
     var self = this;
     
@@ -28,15 +29,17 @@ var worksCart = {
       this.cart = [];
     }
 
-    // 2. 如果页面引入了 Supabase，我们尝试与云端进行实时同步与智能合并 (RULE 3)
-    if (typeof _supabase !== 'undefined') {
+    // 2. 兼容各种全局作用域，确保 100% 能读取到 Supabase 客户端 (RULE 3)
+    var supabaseClient = typeof _supabase !== 'undefined' ? _supabase : window._supabase;
+
+    if (supabaseClient) {
       try {
-        var { data: sessionData } = await _supabase.auth.getSession();
+        var { data: sessionData } = await supabaseClient.auth.getSession();
         if (sessionData && sessionData.session) {
           self.currentUser = sessionData.session.user;
           
           // 从云端 profiles 表中获取保存的收藏和购物车数据
-          var { data: profile, error } = await _supabase
+          var { data: profile, error } = await supabaseClient
             .from('profiles')
             .select('favorites, cart')
             .eq('id', self.currentUser.id)
@@ -54,9 +57,9 @@ var worksCart = {
             var dbFavs = profile.favorites || [];
             if (dbFavs.length > 0) {
               var combinedFavs = self.favorites.concat(dbFavs);
-              var uniqueFavs = combinedFavs.filter(function(item, pos, self) {
+              var uniqueFavs = combinedFavs.filter(function(item, pos, selfArr) {
                 var id = typeof item === 'object' ? item.id : item;
-                return self.findIndex(function(i) {
+                return selfArr.findIndex(function(i) {
                   var compareId = typeof i === 'object' ? i.id : i;
                   return compareId === id;
                 }) === pos;
@@ -109,42 +112,46 @@ var worksCart = {
     if (typeof renderCartList === 'function') renderCartList();
   },
   
-  // 核心：保存本地并强制【同步/等待】通过 upsert 写入云端数据库 (无视记录是否存在) [3.2.1]
+  // 保存本地并强制【同步/等待】推送到云端数据库
   saveToStorage: async function() {
     var self = this;
 
     // 1. 严格排重：过滤掉重复商品
-    this.favorites = this.favorites.filter(function(item, pos, self) {
-      return self.findIndex(function(i) { return i.id === item.id; }) === pos;
+    this.favorites = this.favorites.filter(function(item, pos, selfArr) {
+      return selfArr.findIndex(function(i) { return i.id === item.id; }) === pos;
     });
-    this.cart = this.cart.filter(function(item, pos, self) {
-      return self.findIndex(function(i) { return i.id === item.id; }) === pos;
+    this.cart = this.cart.filter(function(item, pos, selfArr) {
+      return selfArr.findIndex(function(i) { return i.id === item.id; }) === pos;
     });
 
     // 2. 写入本地 LocalStorage 缓存
     localStorage.setItem('works_favorites', JSON.stringify(this.favorites));
     localStorage.setItem('works_cart', JSON.stringify(this.cart));
 
-    // 3. 如果用户已登录，采用 .upsert 机制强制在 profiles 表中写入数据 (即使行不存在也会自动创建) [3.2.1]
-    if (self.currentUser && typeof _supabase !== 'undefined') {
+    // 3. 兼容获取全局 Supabase 客户端实例
+    var supabaseClient = typeof _supabase !== 'undefined' ? _supabase : window._supabase;
+
+    // 4. 如果用户已登录，采用 .upsert 机制写入 (无视记录是否存在都可强制保存)
+    if (self.currentUser && supabaseClient) {
       try {
-        var { error } = await _supabase.from('profiles').upsert({
+        var { error } = await supabaseClient.from('profiles').upsert({
           id: self.currentUser.id,
           favorites: self.favorites,
           cart: self.cart,
           updated_at: new Date().toISOString()
         });
         
-        // 【关键调试点】：如果写入数据库失败，强制在控制台打印出具体 RLS 策略或格式错误信息！
+        // 【核心排查点】：如果写入数据库由于格式或安全限制失败，强制在浏览器页面弹出 Alert 警告，不再静默！
         if (error) {
-          console.error('Supabase cloud save error details:', error);
+          console.error('Supabase save error details:', error);
+          alert('Database Save Failed!\nMessage: ' + error.message + '\nDetails: ' + error.details);
         }
       } catch (err) {
         console.error('Error uploading state to cloud:', err);
       }
     }
 
-    // 4. 通知页面刷新计数
+    // 5. 通知页面刷新计数
     this.updateButtonStates();
     if (typeof updateCartCounts === 'function') updateCartCounts();
   },
@@ -169,7 +176,6 @@ var worksCart = {
     });
   },
   
-  // 复制并替换 DOM 节点，以彻底清除 works.html 标签中绑定的静态 alert 弹出事件
   setupModalButtons: function() {
     var btnFavorite = document.getElementById('btnFavorite');
     var btnCart = document.getElementById('btnCart');
@@ -239,7 +245,6 @@ var worksCart = {
     return this.cart.some(function(item) { return item.id === workId; });
   },
   
-  // 收藏切换逻辑 (已从 works 页面移除任何 Toast 气泡与弹窗)
   toggleFavorite: async function() {
     var workData = this.getWorkData();
     if (!workData) return;
@@ -256,7 +261,6 @@ var worksCart = {
     this.updateButtonStates();
   },
   
-  // 购物车切换逻辑 (已从 works 页面移除任何 Toast 气泡与弹窗)
   toggleCart: async function() {
     var workData = this.getWorkData();
     if (!workData) return;
@@ -275,7 +279,6 @@ var worksCart = {
     this.updateButtonStates();
   },
 
-  // 静默将商品直接加购并【强制等待】数据库返回成功
   silentAddToCart: async function() {
     var workData = this.getWorkData();
     if (!workData) return;
@@ -286,39 +289,32 @@ var worksCart = {
       workData.selected = true; // 确保默认属于勾选状态
       this.cart.push(workData);
     } else {
-      // 即使已经存在，也重置为勾选状态，方便合并购买
       existingItem.selected = true;
     }
-    await this.saveToStorage(); // 强行使用 await 等待数据库返回成功，然后才允许执行后续跳转！
+    await this.saveToStorage(); // 强行使用 await 等待数据库返回成功
   },
   
-  // 核心样式高亮：根据商品是否在对应清单，实时改变 ❤️ 图标与 🛒 图标的纯黑实心充填
   updateButtonStates: function() {
     var btnFavorite = document.getElementById('btnFavorite');
     var btnCart = document.getElementById('btnCart');
     var workData = this.getWorkData();
     
-    // 如果数据有效，自动在弹窗的左侧纵向布局底部注入“即可购买”（PURCHASE NOW）组件
     if (workData) {
       this.injectPurchaseComponent(workData);
     }
     
     if (btnFavorite && workData) {
       if (this.isFavorite(workData.id)) {
-        // 实心黑❤️
         btnFavorite.innerHTML = '<svg viewBox="0 0 24 24" fill="#040000" stroke="#040000" stroke-width="1.5"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
       } else {
-        // 空心❤️
         btnFavorite.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#040000" stroke-width="1.5"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
       }
     }
 
     if (btnCart && workData) {
       if (this.isInCart(workData.id)) {
-        // 实心黑🛒
         btnCart.innerHTML = '<svg viewBox="0 0 24 24" fill="#040000" stroke="#040000" stroke-width="1.5"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>';
       } else {
-        // 空心🛒
         btnCart.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#040000" stroke-width="1.5"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>';
       }
     }
@@ -332,7 +328,7 @@ var worksCart = {
     style.id = styleId;
     style.textContent = [
       '#modalBuyNowComponent {',
-      '  border-top: 2px solid #000000 !important; /* 实线，且跟弹窗外框一样的 2px 边框完全对齐 */',
+      '  border-top: 2px solid #000000 !important;',
       '  padding: 20px 24px;',
       '  text-align: left;',
       '  display: flex;',
