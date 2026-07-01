@@ -1,5 +1,5 @@
 (function() {
-  // 完整还原后的高清矢量 SVG 导航栏 HTML 结构
+  // 高清矢量 SVG 导航栏 HTML 结构 (已去除选项前缀符号)
   var TOOLBAR_HTML = [
     '<header class="toolbar-header" id="sharedToolbar">',
     '  <div class="toolbar-left-btn" id="menu-btn">',
@@ -39,14 +39,14 @@
     '</header>',
     '<div class="menu-popup" id="menuPopup">',
     '  <a href="' + getRelativePath() + 'index.html" class="menu-home-link">* WUKUwork-+5 *</a>',
-    '  <a href="' + getRelativePath() + 'works.html">*1-UnIqUe PrOdUcT</a>',
-    '  <a href="' + getRelativePath() + 'visual.html">*2-ViSuAl WoRkS</a>',
-    '  <a href="' + getRelativePath() + 'about.html">*3+AbOuT WUKU</a>',
-    '  <a href="' + getRelativePath() + 'contact.html">*4+CoNtAcT WUKU</a>',
+    '  <a href="' + getRelativePath() + 'works.html">UnIqUe PrOdUcT</a>',
+    '  <a href="' + getRelativePath() + 'visual.html">ViSuAl WoRkS</a>',
+    '  <a href="' + getRelativePath() + 'about.html">AbOuT WUKU</a>',
+    '  <a href="' + getRelativePath() + 'contact.html">CoNtAcT WUKU</a>',
     '</div>'
   ].join('\n');
 
-  // 工具栏CSS - 锁定中间 Logo 在最高精度的物理尺寸上，绝不随设备大小变化
+  // 工具栏CSS - 所有行完全保持居中
   var TOOLBAR_CSS = [
     '.toolbar-header {',
     '  position: fixed;',
@@ -62,14 +62,14 @@
     '  height: 57.86px;    /* 保持：导航栏精致的高度 */',
     '  box-sizing: border-box;',
     '}',
-    '.toolbar-left-btn { width: 23.07px; flex-shrink: 0; cursor: pointer; } /* 保持：左侧按钮原版尺寸 */',
+    '.toolbar-left-btn { width: 23.07px; flex-shrink: 0; cursor: pointer; }',
     '.toolbar-center-text {',
-    '  width: 170px !important;  /* 强行锁死：Logo 物理宽度增加至 170px */',
-    '  height: 52px !important;  /* 强行锁死：Logo 物理高度提升至 52px（极限饱满大字，且不溢出破线） */',
+    '  width: 170px !important;  /* 锁死：Logo 物理宽度为 170px */',
+    '  height: 52px !important;  /* 锁死：Logo 物理高度为 52px */',
     '  flex-shrink: 0;',
     '  cursor: pointer;',
     '}',
-    '.toolbar-right-btn { width: 23.07px; flex-shrink: 0; cursor: pointer; } /* 保持：右侧按钮尺寸 */',
+    '.toolbar-right-btn { width: 23.07px; flex-shrink: 0; cursor: pointer; }',
     '.toolbar-left-btn svg, .toolbar-center-text svg, .toolbar-right-btn svg {',
     '  width: 100%; height: auto; display: block;',
     '}',
@@ -101,10 +101,11 @@
     '  border-bottom: 1px solid #eee;',
     '  transition: color 0.3s;',
     '  white-space: nowrap;',
+    '  text-align: center;   /* 调整：所有菜单项直接居中对齐 */',
     '}',
     '.menu-popup a:last-child { border-bottom: none; }',
     '.menu-popup a:hover { color: #999; }',
-    '.menu-home-link { text-align: center; }',
+    '.menu-home-link { text-align: center !important; }',
     '@media (max-width: 768px) {',
     '  .toolbar-header { padding: 8px 15px; }',
     '  .menu-popup {',
@@ -135,7 +136,7 @@
   function injectToolbar() {
     if (document.getElementById('sharedToolbar')) return;
     var wrap = document.createElement('div');
-    wrap.innerHTML = TOOLBAR_HTML; // 此处已统一修复为正确变量名 TOOLBAR_HTML，杜绝报错崩溃
+    wrap.innerHTML = TOOLBAR_HTML;
     while (wrap.firstChild) {
       document.body.insertBefore(wrap.firstChild, document.body.firstChild);
     }
