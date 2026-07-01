@@ -14,11 +14,10 @@ var worksCart = {
     this.handleUrlRedirection(); // 启动一键跳转和弹窗自动拉起机制
   },
   
-  // 核心：自适应数据同步加载
   loadFromStorage: async function() {
     var self = this;
     
-    // 1. 先尝试读取本地 LocalStorage（作为未登录或离线时的备用）
+    // 1. 先尝试读取本地 LocalStorage（作为基础）
     try {
       var savedFavorites = localStorage.getItem('works_favorites');
       var savedCart = localStorage.getItem('works_cart');
@@ -29,7 +28,7 @@ var worksCart = {
       this.cart = [];
     }
 
-    // 2. 如果页面引入了 Supabase，我们尝试与云端进行实时同步 (RULE 3)
+    // 2. 如果页面引入了 Supabase，我们尝试与云端进行实时同步与智能合并 (RULE 3)
     if (typeof _supabase !== 'undefined') {
       try {
         var { data: sessionData } = await _supabase.auth.getSession();
@@ -43,14 +42,60 @@ var worksCart = {
             .eq('id', self.currentUser.id)
             .single();
 
+          if (error) {
+            console.error('Error fetching profile from cloud:', error);
+          }
+
           if (!error && profile) {
-            // 如果云端有数据，则覆盖并同步到本地
-            if (profile.favorites) self.favorites = profile.favorites;
-            if (profile.cart) self.cart = profile.cart;
-            
-            // 保持本地 LocalStorage 同步
-            localStorage.setItem('works_favorites', JSON.stringify(self.favorites));
-            localStorage.setItem('works_cart', JSON.stringify(self.cart));
+            // --- 开启智能双向合并同步算法 ---
+            var needSaveBack = false;
+
+            // 2.1 合并并同步收藏夹 (Favorites)
+            var dbFavs = profile.favorites || [];
+            if (dbFavs.length > 0) {
+              var combinedFavs = self.favorites.concat(dbFavs);
+              var uniqueFavs = combinedFavs.filter(function(item, pos, arr) {
+                var id = typeof item === 'object' ? item.id : item;
+                return arr.findIndex(function(i) {
+                  var compareId = typeof i === 'object' ? i.id : i;
+                  return compareId === id;
+                }) === pos;
+              });
+              if (uniqueFavs.length !== self.favorites.length || uniqueFavs.length !== dbFavs.length) {
+                needSaveBack = true;
+              }
+              self.favorites = uniqueFavs;
+            } else if (self.favorites.length > 0) {
+              // 云端为空但本地有数据，需要将本地推上云端
+              needSaveBack = true;
+            }
+
+            // 2.2 合并并同步购物车 (Cart)
+            var dbCart = profile.cart || [];
+            if (dbCart.length > 0) {
+              dbCart.forEach(function(dbItem) {
+                var localItem = self.cart.find(function(i) { return i.id === dbItem.id; });
+                if (localItem) {
+                  var oldQty = localItem.quantity || 1;
+                  localItem.quantity = Math.max(oldQty, dbItem.quantity || 1);
+                  if (localItem.quantity !== oldQty) needSaveBack = true;
+                } else {
+                  self.cart.push(dbItem);
+                  needSaveBack = true;
+                }
+              });
+            } else if (self.cart.length > 0) {
+              // 云端为空但本地有数据，需要将本地推上云端
+              needSaveBack = true;
+            }
+
+            // 2.3 执行回存，确保存储一致
+            if (needSaveBack) {
+              await self.saveToStorage();
+            } else {
+              localStorage.setItem('works_favorites', JSON.stringify(self.favorites));
+              localStorage.setItem('works_cart', JSON.stringify(self.cart));
+            }
           }
         }
       } catch (err) {
@@ -64,7 +109,6 @@ var worksCart = {
     if (typeof renderCartList === 'function') renderCartList();
   },
   
-  // 核心：保存本地并同步推送到云端数据库
   saveToStorage: async function() {
     var self = this;
 
@@ -83,11 +127,16 @@ var worksCart = {
     // 3. 如果用户已登录，同步将最新数据更新到云端 profiles 表
     if (self.currentUser && typeof _supabase !== 'undefined') {
       try {
-        await _supabase.from('profiles').update({
+        var { error } = await _supabase.from('profiles').update({
           favorites: self.favorites,
           cart: self.cart,
           updated_at: new Date().toISOString()
         }).eq('id', self.currentUser.id);
+        
+        // 【关键调试点】：如果写入数据库失败，强制在控制台打印出具体 RLS 策略或格式错误信息！
+        if (error) {
+          console.error('Supabase cloud save error details:', error);
+        }
       } catch (err) {
         console.error('Error uploading state to cloud:', err);
       }
