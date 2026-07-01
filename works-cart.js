@@ -1,19 +1,24 @@
 // ==========================================
-// WUKUWORK 收藏与购物车数据中心核心脚本 (works-cart.js)
+// WUKUWORK 收藏与购物车云端同步数据中心 (works-cart.js)
 // ==========================================
 
 var worksCart = {
   favorites: [],
   cart: [],
+  currentUser: null,
   
   init: function() {
-    this.loadFromStorage();
     this.injectStyles(); // 动态注入完美的实线和边缘对其样式
+    this.loadFromStorage(); // 内部自动识别并同步本地与云端数据
     this.bindEvents();
     this.handleUrlRedirection(); // 启动一键跳转和弹窗自动拉起机制
   },
   
-  loadFromStorage: function() {
+  // 核心：自适应数据同步加载
+  loadFromStorage: async function() {
+    var self = this;
+    
+    // 1. 先尝试读取本地 LocalStorage（作为未登录或离线时的备用）
     try {
       var savedFavorites = localStorage.getItem('works_favorites');
       var savedCart = localStorage.getItem('works_cart');
@@ -23,10 +28,47 @@ var worksCart = {
       this.favorites = [];
       this.cart = [];
     }
+
+    // 2. 如果页面引入了 Supabase，我们尝试与云端进行实时同步 (RULE 3)
+    if (typeof _supabase !== 'undefined') {
+      try {
+        var { data: sessionData } = await _supabase.auth.getSession();
+        if (sessionData && sessionData.session) {
+          self.currentUser = sessionData.session.user;
+          
+          // 从云端 profiles 表中获取保存的收藏和购物车数据
+          var { data: profile, error } = await _supabase
+            .from('profiles')
+            .select('favorites, cart')
+            .eq('id', self.currentUser.id)
+            .single();
+
+          if (!error && profile) {
+            // 如果云端有数据，则覆盖并同步到本地
+            if (profile.favorites) self.favorites = profile.favorites;
+            if (profile.cart) self.cart = profile.cart;
+            
+            // 保持本地 LocalStorage 同步
+            localStorage.setItem('works_favorites', JSON.stringify(self.favorites));
+            localStorage.setItem('works_cart', JSON.stringify(self.cart));
+          }
+        }
+      } catch (err) {
+        console.error('Error syncing from Supabase cloud:', err);
+      }
+    }
+    
+    // 3. 刷新按钮及卡片数量状态
+    this.updateButtonStates();
+    if (typeof updateCartCounts === 'function') updateCartCounts();
+    if (typeof renderCartList === 'function') renderCartList();
   },
   
-  // 严格排重：保存数据时过滤掉重复商品
-  saveToStorage: function() {
+  // 核心：保存本地并同步推送到云端数据库
+  saveToStorage: async function() {
+    var self = this;
+
+    // 1. 严格排重：过滤掉重复商品
     this.favorites = this.favorites.filter(function(item, pos, self) {
       return self.findIndex(function(i) { return i.id === item.id; }) === pos;
     });
@@ -34,8 +76,26 @@ var worksCart = {
       return self.findIndex(function(i) { return i.id === item.id; }) === pos;
     });
 
+    // 2. 写入本地 LocalStorage 缓存
     localStorage.setItem('works_favorites', JSON.stringify(this.favorites));
     localStorage.setItem('works_cart', JSON.stringify(this.cart));
+
+    // 3. 如果用户已登录，同步将最新数据更新到云端 profiles 表
+    if (self.currentUser && typeof _supabase !== 'undefined') {
+      try {
+        await _supabase.from('profiles').update({
+          favorites: self.favorites,
+          cart: self.cart,
+          updated_at: new Date().toISOString()
+        }).eq('id', self.currentUser.id);
+      } catch (err) {
+        console.error('Error uploading state to cloud:', err);
+      }
+    }
+
+    // 4. 通知页面刷新计数
+    this.updateButtonStates();
+    if (typeof updateCartCounts === 'function') updateCartCounts();
   },
   
   bindEvents: function() {
@@ -58,7 +118,6 @@ var worksCart = {
     });
   },
   
-  // 复制并替换 DOM 节点，以彻底清除 works.html 标签中绑定的静态 alert 弹出事件
   setupModalButtons: function() {
     var btnFavorite = document.getElementById('btnFavorite');
     var btnCart = document.getElementById('btnCart');
@@ -128,7 +187,6 @@ var worksCart = {
     return this.cart.some(function(item) { return item.id === workId; });
   },
   
-  // 收藏切换逻辑
   toggleFavorite: function() {
     var workData = this.getWorkData();
     if (!workData) return;
@@ -145,7 +203,6 @@ var worksCart = {
     this.updateButtonStates();
   },
   
-  // 购物车切换逻辑
   toggleCart: function() {
     var workData = this.getWorkData();
     if (!workData) return;
@@ -164,7 +221,6 @@ var worksCart = {
     this.updateButtonStates();
   },
 
-  // 静默将商品直接加购
   silentAddToCart: function() {
     var workData = this.getWorkData();
     if (!workData) return;
@@ -179,13 +235,11 @@ var worksCart = {
     }
   },
   
-  // 核心样式高亮
   updateButtonStates: function() {
     var btnFavorite = document.getElementById('btnFavorite');
     var btnCart = document.getElementById('btnCart');
     var workData = this.getWorkData();
     
-    // 如果数据有效，自动向大弹窗的最下方注入“即可购买”（PURCHASE NOW）组件
     if (workData) {
       this.injectPurchaseComponent(workData);
     }
@@ -207,7 +261,6 @@ var worksCart = {
     }
   },
 
-  // 动态向 HTML 注入实线和全宽对齐样式
   injectStyles: function() {
     var styleId = 'wuku-buy-now-styles';
     if (document.getElementById(styleId)) return;
@@ -216,7 +269,7 @@ var worksCart = {
     style.id = styleId;
     style.innerHTML = `
       #modalBuyNowComponent {
-        border-top: 2px solid #000000 !important; /* 实线，且跟弹窗外框一样的 2px 边框完全对齐 */
+        border-top: 2px solid #000000 !important;
         padding: 20px 24px;
         text-align: left;
         display: flex;
@@ -225,7 +278,7 @@ var worksCart = {
         gap: 30px;
         background: #fff;
         flex-shrink: 0;
-        width: 100%; /* 横跨整块弹窗底部 */
+        width: 100%;
       }
       @media (max-width: 768px) {
         #modalBuyNowComponent {
@@ -243,12 +296,10 @@ var worksCart = {
     document.head.appendChild(style);
   },
 
-  // 动态创建并注入弹窗大容器底部（横跨整个底部，不参与滑动）
   injectPurchaseComponent: function(workData) {
     var modalContainer = document.querySelector('.modal-container');
     if (!modalContainer || !workData) return;
     
-    // 检查并清除上一次可能残留的旧组件
     var oldComponent = document.getElementById('modalBuyNowComponent');
     if (oldComponent) oldComponent.remove();
     
@@ -265,19 +316,16 @@ var worksCart = {
     var div = document.createElement('div');
     div.id = 'modalBuyNowComponent';
     div.innerHTML = `
-      <!-- 左侧垂直价格标识：PRICE 与 RMB 符号 -->
       <div style="display: flex; flex-direction: column; justify-content: center; gap: 4px; flex-shrink: 0; line-height: 1;">
         <span style="font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 400; color: #666; letter-spacing: 0.5px;">PRICE:</span>
         <div style="display: flex; align-items: baseline; gap: 3px; margin-top: 4px;">
           <span style="font-family: 'Inter', sans-serif; font-size: 10px; color: #666; font-weight: 400;">RMB</span>
-          <span style="font-family: 'Inter', sans-serif; font-size: 26px; font-weight: 500; color: #000; letter-spacing: -0.5px;">${priceVal}</span>
+          <span style="font-family: 'Inter', sans-serif; font-size: 24px; font-weight: 500; color: #000; letter-spacing: -0.5px;">${priceVal}</span>
         </div>
       </div>
-      <!-- 右侧纯黑扁平大按钮 -->
       <button id="modalBuyNowBtn" style="flex: 1; height: 48px; border: 2px solid #000; background: #000; color: #fff; font-family: 'Inter', sans-serif; font-size: 18px; font-weight: 400; letter-spacing: 1px; cursor: none !important; transition: 0.2s; display: flex; align-items: center; justify-content: center;">BUY NOW</button>
     `;
     
-    // 直接作为大容器的子元素添加在 modal-body 下方
     modalContainer.appendChild(div);
     
     var btn = document.getElementById('modalBuyNowBtn');
@@ -295,13 +343,12 @@ var worksCart = {
       
       var self = this;
       btn.addEventListener('click', function() {
-        self.silentAddToCart(); // 1. 执行静默加购
-        window.location.href = 'profile.html?open=cart'; // 2. 立即跳转至 Profile 并唤醒购物车弹窗进行结算
+        self.silentAddToCart(); // 静默加购
+        window.location.href = 'profile.html?open=cart'; // 立即跳转并唤起结算
       });
     }
   },
 
-  // 跨页面参数捕获及弹窗自动唤起触发
   handleUrlRedirection: function() {
     var urlParams = new URLSearchParams(window.location.search);
     var targetId = urlParams.get('id');
@@ -312,7 +359,7 @@ var worksCart = {
         if (workCard) {
           var label = workCard.querySelector('.work-label');
           if (label) {
-            label.click(); // 执行模拟点击
+            label.click();
           }
         }
       }, 300);

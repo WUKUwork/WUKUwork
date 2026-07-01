@@ -57,6 +57,9 @@
       pointer-events: none;
       border: 1px solid #000;
     }
+    .works-gallery img {
+       max-width: 100%;
+    }
     .work-label {
       margin-top: 8px;
       font-family: 'Inter', sans-serif;
@@ -335,7 +338,7 @@
         </button>
       </div>
       <div class="modal-body">
-        <!-- 还原至最初最整洁的结构 -->
+        <!-- 干净、原始、支持完美满宽注入的 modal-body -->
         <div class="modal-image-area" id="modalImageArea"></div>
         <div class="modal-actions">
           <button class="modal-action-btn" id="btnFavorite" title="Favorite">
@@ -566,6 +569,7 @@
     });
     window.addEventListener('resize', initPositions);
   </script>
+  <!-- 在 works.html 的倒数第二行（</body> 之前）引入数据连通层和核心逻辑 -->
   <script src="works-cart.js"></script>
 </body>
 </html>

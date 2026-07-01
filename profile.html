@@ -173,43 +173,6 @@
       color: #fff;
     }
 
-    .order-list {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .order-item {
-      border: 1px solid #ddd;
-      padding: 18px 22px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      transition: border-color 0.3s;
-    }
-    .order-item:hover { border-color: #000; }
-    .order-id {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 16px;
-      letter-spacing: 2px;
-    }
-    .order-name {
-      font-size: 13px;
-      color: #333;
-      margin-top: 4px;
-    }
-    .order-status {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 13px;
-      letter-spacing: 2px;
-      padding: 4px 12px;
-      border: 1px solid #000;
-    }
-    .order-price {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 20px;
-      letter-spacing: 1px;
-    }
-
     .setting-list {
       display: flex;
       flex-direction: column;
@@ -338,7 +301,7 @@
       border: 2px solid #000;
     }
     
-    /* 订单弹窗定制最大宽度，保证多列数据展现完整 */
+    /* 弹窗定制最大宽度，保证多列数据展现完整 */
     .order-modal-box {
       max-width: 500px;
     }
@@ -661,7 +624,7 @@
 
   <!-- 收藏列表弹窗 -->
   <div class="edit-modal-overlay" id="favoritesModalOverlay">
-    <div class="edit-modal-box">
+    <div class="edit-modal-box" style="max-width: 480px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h3 style="font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px;">* My FaVoRiTeS</h3>
         <button id="closeFavoritesModal" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
@@ -1387,7 +1350,7 @@
               '<div style="font-size: 13px; font-weight: 500; cursor: pointer;">' + item.title + '</div>' +
               '</div>' +
               '<div class="cart-item-right">' +
-              '<button onclick="removeFromFavorites(\'' + item.id + '\')" class="cart-remove-btn">&times;</button>' +
+              '<button onclick="removeFromFavorites(\'' + item.id + '\')" class="cart-remove-btn" style="background: none; border: none; color: #ff6b6b; font-size: 20px; cursor: pointer; padding: 0 10px;">&times;</button>' +
               '</div>' +
               '</div>';
           }).join('');
@@ -1495,7 +1458,7 @@
       } else {
         list.innerHTML = favorites.map(function(item) {
           return '<div class="cart-item" style="cursor: none;">' +
-            '<img src="' + item.image + '" onclick="goToProduct(\'' + item.id + '\')" style="width: 70px; height: 70px; object-fit: cover; border: 1px solid #000; cursor: pointer;" alt="' + item.title + '">' +
+            '<img src="' + item.image + '" onclick="goToProduct(\'' + item.id + '\')" style="width: 80px; height: 80px; object-fit: cover; border: 1px solid #000; cursor: pointer;" alt="' + item.title + '">' +
             '<div class="cart-item-info" onclick="goToProduct(\'' + item.id + '\')">' +
             '<div style="font-family: \'Bebas Neue\', sans-serif; font-size: 14px; letter-spacing: 1px; color: #666; cursor: pointer;">*' + item.category + '</div>' +
             '<div style="font-size: 13px; font-weight: 500; cursor: pointer;">' + item.title + '</div>' +
