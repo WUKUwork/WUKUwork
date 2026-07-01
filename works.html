@@ -19,7 +19,7 @@
     .custom-cursor {
       position: fixed;
       pointer-events: none;
-      z-index: 10000;
+      z-index: 100000; /* 已提升到 100000，解决弹窗盖住鼠标的问题 */
       transform: translate(-50%, -50%);
       transition: transform 0.3s ease, width 0.3s ease, height 0.3s ease;
       width: 32px;
@@ -190,7 +190,7 @@
     @media (max-width: 768px) {
       .custom-cursor { display: none; }
       body, a, button, [onclick], [role="button"] { cursor: auto !important; }
-      body { overflow-y: auto !important; } /* 解决手机端无法上下滑动的问题 */
+      body { overflow-y: auto !important; }
       .page-header { padding: 20px; }
       .page-header h1 { font-size: 28px; }
       .work-item {
@@ -205,7 +205,7 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 80px 0 20px; /* 顶部内边距改为 80px，防止第一个作品被固定工具栏遮挡 */
+        padding: 80px 0 20px;
         height: auto;
         min-height: auto;
       }
@@ -335,6 +335,7 @@
         </button>
       </div>
       <div class="modal-body">
+        <!-- 还原至最初最整洁的结构 -->
         <div class="modal-image-area" id="modalImageArea"></div>
         <div class="modal-actions">
           <button class="modal-action-btn" id="btnFavorite" title="Favorite">
@@ -534,12 +535,6 @@
         modalOverlay.classList.remove('active');
       }
     });
-    document.getElementById('btnFavorite').addEventListener('click', function() {
-      alert('Added to favorites!');
-    });
-    document.getElementById('btnCart').addEventListener('click', function() {
-      alert('Added to cart!');
-    });
     document.getElementById('btnService').addEventListener('click', function() {
       alert('Customer service coming soon!');
     });
@@ -571,5 +566,6 @@
     });
     window.addEventListener('resize', initPositions);
   </script>
+  <script src="works-cart.js"></script>
 </body>
 </html>
