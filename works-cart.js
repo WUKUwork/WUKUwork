@@ -54,9 +54,9 @@ var worksCart = {
             var dbFavs = profile.favorites || [];
             if (dbFavs.length > 0) {
               var combinedFavs = self.favorites.concat(dbFavs);
-              var uniqueFavs = combinedFavs.filter(function(item, pos, arr) {
+              var uniqueFavs = combinedFavs.filter(function(item, pos, self) {
                 var id = typeof item === 'object' ? item.id : item;
-                return arr.findIndex(function(i) {
+                return self.findIndex(function(i) {
                   var compareId = typeof i === 'object' ? i.id : i;
                   return compareId === id;
                 }) === pos;
@@ -109,6 +109,7 @@ var worksCart = {
     if (typeof renderCartList === 'function') renderCartList();
   },
   
+  // 核心：保存本地并强制【同步/等待】推送到云端数据库
   saveToStorage: async function() {
     var self = this;
 
@@ -133,7 +134,6 @@ var worksCart = {
           updated_at: new Date().toISOString()
         }).eq('id', self.currentUser.id);
         
-        // 【关键调试点】：如果写入数据库失败，强制在控制台打印出具体 RLS 策略或格式错误信息！
         if (error) {
           console.error('Supabase cloud save error details:', error);
         }
@@ -167,6 +167,7 @@ var worksCart = {
     });
   },
   
+  // 复制并替换 DOM 节点，以彻底清除 works.html 标签中绑定的静态 alert 弹出事件
   setupModalButtons: function() {
     var btnFavorite = document.getElementById('btnFavorite');
     var btnCart = document.getElementById('btnCart');
@@ -236,7 +237,8 @@ var worksCart = {
     return this.cart.some(function(item) { return item.id === workId; });
   },
   
-  toggleFavorite: function() {
+  // 收藏切换逻辑 (已从 works 页面移除任何 Toast 气泡与弹窗)
+  toggleFavorite: async function() {
     var workData = this.getWorkData();
     if (!workData) return;
     
@@ -248,11 +250,12 @@ var worksCart = {
       this.favorites.push(workData);
     }
     
-    this.saveToStorage();
+    await this.saveToStorage();
     this.updateButtonStates();
   },
   
-  toggleCart: function() {
+  // 购物车切换逻辑 (已从 works 页面移除任何 Toast 气泡与弹窗)
+  toggleCart: async function() {
     var workData = this.getWorkData();
     if (!workData) return;
     
@@ -266,11 +269,12 @@ var worksCart = {
       this.cart.push(workData);
     }
     
-    this.saveToStorage();
+    await this.saveToStorage();
     this.updateButtonStates();
   },
 
-  silentAddToCart: function() {
+  // 静默将商品直接加购并【强制等待】数据库返回成功
+  silentAddToCart: async function() {
     var workData = this.getWorkData();
     if (!workData) return;
     
@@ -279,76 +283,87 @@ var worksCart = {
       workData.quantity = 1;
       workData.selected = true; // 确保默认属于勾选状态
       this.cart.push(workData);
-      this.saveToStorage();
-      this.updateButtonStates();
+    } else {
+      // 即使已经存在，也重置为勾选状态，方便合并购买
+      existingItem.selected = true;
     }
+    await this.saveToStorage(); // 强行使用 await 等待数据库返回成功，然后才允许执行后续跳转！
   },
   
+  // 核心样式高亮：根据商品是否在对应清单，实时改变 ❤️ 图标与 🛒 图标的纯黑实心充填
   updateButtonStates: function() {
     var btnFavorite = document.getElementById('btnFavorite');
     var btnCart = document.getElementById('btnCart');
     var workData = this.getWorkData();
     
+    // 如果数据有效，自动在弹窗的左侧纵向布局底部注入“即可购买”（PURCHASE NOW）组件
     if (workData) {
       this.injectPurchaseComponent(workData);
     }
     
     if (btnFavorite && workData) {
       if (this.isFavorite(workData.id)) {
+        // 实心黑❤️
         btnFavorite.innerHTML = '<svg viewBox="0 0 24 24" fill="#040000" stroke="#040000" stroke-width="1.5"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
       } else {
+        // 空心❤️
         btnFavorite.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#040000" stroke-width="1.5"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
       }
     }
 
     if (btnCart && workData) {
       if (this.isInCart(workData.id)) {
+        // 实心黑🛒
         btnCart.innerHTML = '<svg viewBox="0 0 24 24" fill="#040000" stroke="#040000" stroke-width="1.5"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>';
       } else {
+        // 空心🛒
         btnCart.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#040000" stroke-width="1.5"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>';
       }
     }
   },
 
+  // 动态向 HTML 注入实线和全宽对齐样式
   injectStyles: function() {
     var styleId = 'wuku-buy-now-styles';
     if (document.getElementById(styleId)) return;
     
     var style = document.createElement('style');
     style.id = styleId;
-    style.innerHTML = `
-      #modalBuyNowComponent {
-        border-top: 2px solid #000000 !important;
-        padding: 20px 24px;
-        text-align: left;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 30px;
-        background: #fff;
-        flex-shrink: 0;
-        width: 100%;
-      }
-      @media (max-width: 768px) {
-        #modalBuyNowComponent {
-          padding: 16px;
-          gap: 20px;
-        }
-      }
-      @media (max-width: 480px) {
-        #modalBuyNowComponent {
-          padding: 12px;
-          gap: 15px;
-        }
-      }
-    `;
+    style.textContent = [
+      '#modalBuyNowComponent {',
+      '  border-top: 2px solid #000000 !important; /* 实线，且跟弹窗外框一样的 2px 边框完全对齐 */',
+      '  padding: 20px 24px;',
+      '  text-align: left;',
+      '  display: flex;',
+      '  justify-content: space-between;',
+      '  align-items: center;',
+      '  gap: 30px;',
+      '  background: #fff;',
+      '  flex-shrink: 0;',
+      '  width: 100%; /* 横跨整块弹窗底部 */',
+      '}',
+      '@media (max-width: 768px) {',
+      '  #modalBuyNowComponent {',
+      '    padding: 16px;',
+      '    gap: 20px;',
+      '  }',
+      '}',
+      '@media (max-width: 480px) {',
+      '  #modalBuyNowComponent {',
+      '    padding: 12px;',
+      '    gap: 15px;',
+      '  }',
+      '}'
+    ].join('\n');
     document.head.appendChild(style);
   },
 
+  // 动态创建并注入弹窗大容器底部（横跨整个底部，不参与滑动）
   injectPurchaseComponent: function(workData) {
     var modalContainer = document.querySelector('.modal-container');
     if (!modalContainer || !workData) return;
     
+    // 检查并清除上一次可能残留的旧组件
     var oldComponent = document.getElementById('modalBuyNowComponent');
     if (oldComponent) oldComponent.remove();
     
@@ -364,17 +379,18 @@ var worksCart = {
 
     var div = document.createElement('div');
     div.id = 'modalBuyNowComponent';
-    div.innerHTML = `
-      <div style="display: flex; flex-direction: column; justify-content: center; gap: 4px; flex-shrink: 0; line-height: 1;">
-        <span style="font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 400; color: #666; letter-spacing: 0.5px;">PRICE:</span>
-        <div style="display: flex; align-items: baseline; gap: 3px; margin-top: 4px;">
-          <span style="font-family: 'Inter', sans-serif; font-size: 10px; color: #666; font-weight: 400;">RMB</span>
-          <span style="font-family: 'Inter', sans-serif; font-size: 24px; font-weight: 500; color: #000; letter-spacing: -0.5px;">${priceVal}</span>
-        </div>
-      </div>
-      <button id="modalBuyNowBtn" style="flex: 1; height: 48px; border: 2px solid #000; background: #000; color: #fff; font-family: 'Inter', sans-serif; font-size: 18px; font-weight: 400; letter-spacing: 1px; cursor: none !important; transition: 0.2s; display: flex; align-items: center; justify-content: center;">BUY NOW</button>
-    `;
+    div.innerHTML = [
+      '<div style="display: flex; flex-direction: column; justify-content: center; gap: 4px; flex-shrink: 0; line-height: 1;">',
+      '  <span style="font-family: \'Inter\', sans-serif; font-size: 10px; font-weight: 400; color: #666; letter-spacing: 0.5px;">PRICE:</span>',
+      '  <div style="display: flex; align-items: baseline; gap: 3px; margin-top: 4px;">',
+      '    <span style="font-family: \'Inter\', sans-serif; font-size: 10px; color: #666; font-weight: 400;">RMB</span>',
+      '    <span style="font-family: \'Inter\', sans-serif; font-size: 24px; font-weight: 500; color: #000; letter-spacing: -0.5px;">' + priceVal + '</span>',
+      '  </div>',
+      '</div>',
+      '<button id="modalBuyNowBtn" style="flex: 1; height: 48px; border: 2px solid #000; background: #000; color: #fff; font-family: \'Inter\', sans-serif; font-size: 18px; font-weight: 400; letter-spacing: 1px; cursor: none !important; transition: 0.2s; display: flex; align-items: center; justify-content: center;">BUY NOW</button>'
+    ].join('\n');
     
+    // 直接作为大容器的子元素添加在 modal-body 下方
     modalContainer.appendChild(div);
     
     var btn = document.getElementById('modalBuyNowBtn');
@@ -391,9 +407,9 @@ var worksCart = {
       });
       
       var self = this;
-      btn.addEventListener('click', function() {
-        self.silentAddToCart(); // 静默加购
-        window.location.href = 'profile.html?open=cart'; // 立即跳转并唤起结算
+      btn.addEventListener('click', async function() {
+        await self.silentAddToCart(); // 1. 【强行同步等待】静默写入数据库成功！
+        window.location.href = 'profile.html?open=cart'; // 2. 写入成功后，才被允许跳转和自动拉起结算弹窗
       });
     }
   },
