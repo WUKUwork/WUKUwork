@@ -6,10 +6,18 @@
   <title>UnIqUe PrOdUcT - WUKUWORK</title>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
+    /* 引入本地 Plix-SemiBold 字体 */
+    @font-face {
+      font-family: 'Plix-SemiBold';
+      src: url('Plix-SemiBold.woff') format('woff');
+      font-weight: normal;
+      font-style: normal;
+    }
+
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: smooth; }
     body, a, button, [onclick], [role="button"] {
-      font-family: 'Inter', sans-serif;
+      font-family: 'Plix-SemiBold', 'Bebas Neue', sans-serif;
       background: #fff;
       color: #000;
       cursor: none !important;
@@ -62,7 +70,7 @@
     }
     .work-label {
       margin-top: 8px;
-      font-family: 'Inter', sans-serif;
+      font-family: 'Plix-SemiBold', 'Bebas Neue', sans-serif;
       font-size: 12px;
       color: #000;
       line-height: 1.4;
@@ -107,7 +115,7 @@
       flex-shrink: 0;
     }
     .modal-title {
-      font-family: 'Inter', sans-serif;
+      font-family: 'Plix-SemiBold', 'Bebas Neue', sans-serif;
       font-size: clamp(14px, 2.5vw, 20px);
       font-weight: 500;
       color: #000;
