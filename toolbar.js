@@ -125,11 +125,11 @@
     style.id = 'shared-toolbar-styles';
 
     var relativePath = getRelativePath();
-    // 动态生成包含相对路径的 @font-face 声明，调用 Plix-Regular.woff
+    // 【核心修正】：统一将此处声明的名称改为 "Plix-SemiBold"，对应的资源调用 Plix-SemiBold.woff
     var fontFaceCSS = [
       '@font-face {',
-      '  font-family: "Plix-Regular";',
-      '  src: url("' + relativePath + 'Plix-Regular.woff") format("woff");',
+      '  font-family: "Plix-SemiBold";',
+      '  src: url("' + relativePath + 'Plix-SemiBold.woff") format("woff");',
       '  font-weight: normal;',
       '  font-style: normal;',
       '}'
